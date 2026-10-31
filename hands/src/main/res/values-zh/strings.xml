@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="phonepal_accessibility_label">PhonePal</string>
+    <string name="phonepal_accessibility_summary">让 PhonePal 替你操作其他应用</string>
+    <string name="phonepal_accessibility_description">当你让 PhonePal 执行任务时，它通过此服务读取屏幕内容、截屏，并在其他应用中点击、滑动和输入。屏幕内容只发送给你配置的 AI 模型。支付、发送消息等敏感操作始终会先征得你的确认，你也可以随时点击“停止”按钮结束任务。</string>
+    <string name="phonepal_overlay_stop">停止</string>
+    <string name="phonepal_overlay_stop_description">停止当前 PhonePal 任务</string>
+</resources>

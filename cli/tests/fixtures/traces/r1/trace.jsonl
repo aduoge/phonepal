@@ -1,0 +1,7 @@
+{"time": 1761830000000, "run": "r1", "kind": "PhoneTaskStarted", "step": null, "action": null, "text": "打车回家", "ok": null, "decision": null}
+{"time": 1761830001250, "run": "r1", "kind": "StepPlanned", "step": 0, "action": {"type": "tap", "nodeId": 12, "target": "目的地输入框", "reason": "先输入目的地"}, "text": null, "ok": null, "decision": null}
+{"time": 1761830001900, "run": "r1", "kind": "StepExecuted", "step": 0, "action": {"type": "tap", "nodeId": 12, "target": "目的地输入框"}, "text": null, "ok": true, "decision": "allow: no rule matched"}
+{"time": 1761830003000, "run": "r1", "kind": "StepPlanned", "step": 1, "action": {"type": "type", "text": "家", "target": "目的地"}, "text": null, "ok": null, "decision": null}
+{"time": 1761830004000, "run": "r1", "kind": "StepBlocked", "step": 2, "action": {"type": "tap", "point": {"x": 500, "y": 900}, "target": "确认呼叫"}, "text": null, "ok": false, "decision": "ask: confirmation word '确认呼叫'"}
+not json
+{"time": 1761830009000, "run": "r1", "kind": "PhoneTaskFinished", "step": 3, "action": null, "text": "已停在确认呼叫", "ok": true, "decision": null}

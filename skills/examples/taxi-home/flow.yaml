@@ -1,0 +1,7 @@
+steps:
+  - deeplink: route
+  - wait: 1500
+  - ai: 切换到打车页，选择快车并读出预估价
+  - confirm: 确认呼叫快车回家？
+  - tap: 确认呼叫
+  - assert: 正在为您呼叫

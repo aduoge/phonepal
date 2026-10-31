@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PhonePal</string>
+
+    <!-- Navigation -->
+    <string name="nav_chat">聊天</string>
+    <string name="nav_skills">技能</string>
+    <string name="nav_memory">记忆</string>
+    <string name="nav_settings">设置</string>
+    <string name="back">返回</string>
+
+    <!-- Chat -->
+    <string name="chat_input_hint">和 PhonePal 说点什么</string>
+    <string name="chat_answer_hint">回答 PhonePal 的问题</string>
+    <string name="chat_send">发送</string>
+    <string name="chat_stop">停止</string>
+    <string name="chat_busy">PhonePal 正在处理上一条消息</string>
+    <string name="chat_empty">告诉我你想做什么，比如「打车回家」或「记住我家在北京市海淀区」。</string>
+    <string name="chat_question_label">PhonePal 问</string>
+    <string name="chat_takeover_label">需要你接管</string>
+    <string name="chat_takeover_hint">请在手机上完成操作（登录、验证码或安全页面），完成后在这里回复「好了」。</string>
+    <string name="chat_error_label">出错了</string>
+    <string name="banner_accessibility">无障碍服务未开启，PhonePal 还不能操作其他 App。</string>
+    <string name="banner_accessibility_action">去开启</string>
+    <string name="banner_models">还没有配置聊天模型和操作模型。</string>
+    <string name="banner_models_action">去设置</string>
+    <string name="banner_notifications">允许通知后，任务运行和需要确认时会提醒你。</string>
+    <string name="banner_notifications_action">允许</string>
+
+    <!-- Approvals -->
+    <string name="approval_title">需要你确认</string>
+    <string name="approval_once">允许一次</string>
+    <string name="approval_task">本次任务都允许</string>
+    <string name="approval_deny">拒绝</string>
+    <string name="approval_resolved_allowed">已允许：%1$s</string>
+    <string name="approval_resolved_task">本次任务都允许：%1$s</string>
+    <string name="approval_resolved_denied">已拒绝：%1$s</string>
+
+    <!-- Skills -->
+    <string name="skills_title">技能</string>
+    <string name="skills_reload">重新加载</string>
+    <string name="skills_empty">还没有技能。把技能文件夹放到 %1$s 后点重新加载。</string>
+    <string name="skills_problems">加载问题</string>
+    <string name="skills_apps">App：%1$s</string>
+
+    <!-- Memory -->
+    <string name="memory_search_hint">搜索记忆</string>
+    <string name="memory_empty">还没有记忆。</string>
+    <string name="memory_no_hits">没有找到相关笔记。</string>
+    <string name="memory_delete">删除</string>
+    <string name="memory_delete_title">删除这条笔记？</string>
+    <string name="memory_delete_message">「%1$s」会从手机上永久删除。</string>
+    <string name="memory_delete_confirm">删除</string>
+    <string name="memory_not_found">这条笔记已不存在。</string>
+    <string name="cancel">取消</string>
+    <string name="clear">清除</string>
+
+    <!-- Settings -->
+    <string name="settings_title">设置</string>
+    <string name="settings_chat_model">聊天模型</string>
+    <string name="settings_operator_model">操作模型（需支持图片）</string>
+    <string name="settings_base_url">Base URL</string>
+    <string name="settings_model">模型名称</string>
+    <string name="settings_api_key">API Key</string>
+    <string name="settings_show_key">显示 API Key</string>
+    <string name="settings_hide_key">隐藏 API Key</string>
+    <string name="settings_temperature">Temperature（可选）</string>
+    <string name="settings_agent">任务</string>
+    <string name="settings_max_steps">最多步数</string>
+    <string name="settings_learn">成功后记住操作路径</string>
+    <string name="settings_save">保存</string>
+    <string name="settings_saved">已保存</string>
+    <string name="settings_invalid_number">请输入有效的数字</string>
+    <string name="settings_copy_chat">与聊天模型相同</string>
+    <string name="settings_folders">文件夹</string>
+    <string name="settings_folder_skills">技能：%1$s</string>
+    <string name="settings_folder_memory">记忆：%1$s</string>
+    <string name="settings_folder_traces">轨迹：%1$s</string>
+
+    <!-- Service and notifications -->
+    <string name="channel_status">任务状态</string>
+    <string name="channel_status_description">PhonePal 正在运行任务时显示</string>
+    <string name="channel_attention">需要你处理</string>
+    <string name="channel_attention_description">PhonePal 需要你确认或回答问题时提醒</string>
+    <string name="notification_running">PhonePal 正在工作</string>
+    <string name="notification_question">PhonePal 有问题要问你</string>
+
+    <!-- Session messages -->
+    <string name="session_not_configured">还没有配置模型，请先在设置里填写聊天模型和操作模型。</string>
+    <string name="session_busy">已有任务在运行，请稍后再试。</string>
+    <string name="session_stopped">已停止</string>
+</resources>

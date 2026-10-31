@@ -1,0 +1,11 @@
+# fixture flow covering every step kind
+steps:
+  - launch: com.autonavi.minimap
+  - deeplink: search            # a key of SKILL.md deeplinks
+  - deeplink: "amapuri://home"
+  - ai: 选择快车并读出预估价
+  - confirm: 确认呼叫快车？
+  - tap: 确认呼叫
+  - type: { target: 目的地, text: "{destination}" }
+  - wait: 1500
+  - assert: 行程已开始
