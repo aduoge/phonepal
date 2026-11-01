@@ -1,4 +1,4 @@
-"""phonepal: developer CLI for PhonePal skill authors (lint, push, run, logs, traces)."""
+"""phonepal：PhonePal 技能开发者 CLI（校验、推送、运行、日志、轨迹）。"""
 
 from __future__ import annotations
 
@@ -194,51 +194,51 @@ def build_parser() -> argparse.ArgumentParser:
     # global options are accepted before or after the subcommand
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--adb", default=argparse.SUPPRESS,
-                        help="adb executable (default: $ADB or 'adb')")
+                        help="adb 可执行文件（默认：$ADB 或 PATH 上的 adb）")
     common.add_argument("--serial", "-s", default=argparse.SUPPRESS,
-                        help="device serial (default: adb's choice / $ANDROID_SERIAL)")
+                        help="设备序列号（默认由 adb 决定，或取 $ANDROID_SERIAL）")
 
     parser = argparse.ArgumentParser(prog="phonepal", description=__doc__)
-    parser.add_argument("--adb", default=None, help="adb executable (default: $ADB or 'adb')")
-    parser.add_argument("--serial", "-s", default=None, help="device serial")
+    parser.add_argument("--adb", default=None, help="adb 可执行文件（默认：$ADB 或 PATH 上的 adb）")
+    parser.add_argument("--serial", "-s", default=None, help="设备序列号")
     sub = parser.add_subparsers(dest="command", metavar="COMMAND")
     sub.required = True
 
-    p = sub.add_parser("lint", parents=[common], help="validate skill folders like the app does")
+    p = sub.add_parser("lint", parents=[common], help="按 App 的规则校验技能文件夹")
     p.add_argument("skill_dirs", nargs="+", metavar="skill-dir")
     p.set_defaults(func=cmd_lint_entry)
 
-    p = sub.add_parser("push", parents=[common], help="lint, push skill folders to the phone and reload")
+    p = sub.add_parser("push", parents=[common], help="校验并推送技能文件夹到手机，然后重新加载")
     p.add_argument("skill_dirs", nargs="+", metavar="skill-dir")
     p.set_defaults(func=cmd_push)
 
-    p = sub.add_parser("run", parents=[common], help="start a phone task through the debug bridge")
+    p = sub.add_parser("run", parents=[common], help="通过调试桥启动一个手机任务")
     p.add_argument("goal")
-    p.add_argument("--skill", help="skill name to use")
-    p.add_argument("--run-id", help="run id (default: generated); use a fresh one with --follow")
+    p.add_argument("--skill", help="要使用的技能名")
+    p.add_argument("--run-id", help="run id（默认自动生成）；配合 --follow 时请用新的 id")
     p.add_argument("--follow", "-f", action="store_true",
-                   help="stream this run's events until PhoneTaskFinished/Failed; exit 0 on success")
+                   help="持续输出本次运行的事件，直到 PhoneTaskFinished/Failed；成功时退出码为 0")
     p.set_defaults(func=cmd_run)
 
-    p = sub.add_parser("stop", parents=[common], help="stop the running task")
+    p = sub.add_parser("stop", parents=[common], help="停止正在运行的任务")
     p.set_defaults(func=cmd_stop)
 
-    p = sub.add_parser("logs", parents=[common], help="stream PhonePal events from logcat")
-    p.add_argument("--run-id", help="only events of this run")
+    p = sub.add_parser("logs", parents=[common], help="从 logcat 持续读取 PhonePal 事件")
+    p.add_argument("--run-id", help="只显示该次运行的事件")
     p.set_defaults(func=cmd_logs)
 
-    p = sub.add_parser("traces", help="pull and show run traces")
+    p = sub.add_parser("traces", help="拉取并查看运行轨迹")
     tsub = p.add_subparsers(dest="traces_command", metavar="ACTION")
     tsub.required = True
     t = tsub.add_parser("pull", parents=[common], help="adb pull traces/<run_id>")
     t.add_argument("run_id")
-    t.add_argument("--out", default="traces", help="local folder (default: ./traces)")
+    t.add_argument("--out", default="traces", help="本地目录（默认：./traces）")
     t.set_defaults(func=cmd_traces_pull)
-    t = tsub.add_parser("show", parents=[common], help="render a trace.jsonl as a step table")
+    t = tsub.add_parser("show", parents=[common], help="把 trace.jsonl 渲染成步骤表")
     t.add_argument("target", metavar="path-or-run_id",
-                   help="trace.jsonl, its folder, or a run id (looked up in --dir, pulled if missing)")
-    t.add_argument("--dir", default="traces", help="local traces folder for run ids (default: ./traces)")
-    t.add_argument("--full", action="store_true", help="do not truncate long cells")
+                   help="trace.jsonl、其所在目录或 run id（在 --dir 中查找，本地没有则先拉取）")
+    t.add_argument("--dir", default="traces", help="按 run id 查找时使用的本地轨迹目录（默认：./traces）")
+    t.add_argument("--full", action="store_true", help="不截断过长的单元格")
     t.set_defaults(func=cmd_traces_show)
     return parser
 

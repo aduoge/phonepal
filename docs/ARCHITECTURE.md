@@ -1,134 +1,152 @@
-# PhonePal architecture
+# PhonePal 架构
 
-PhonePal is an open-source personal agent that lives on an Android phone: you chat with it in its
-app, and it operates the other apps on the phone for you. The framework provides the hands, the
-eyes, the memory, the safety gate and the model plumbing; users add **scenario skills** (taxi,
-takeout, tickets ...) as small Markdown/YAML folders, without rebuilding the APK.
+PhonePal 是一个跑在 Android 手机上的开源私人助手：你在它的 App 里聊天，它替你操作手机上的其他
+App。框架负责“手”（无障碍操作）、“眼”（读屏）、记忆、安全闸门和模型调用；具体场景（打车、外卖、
+购票……）由用户以**场景技能**的形式添加。技能是 Markdown/YAML 小文件夹，不需要重新打包 APK。
 
-Android 11 (API 30) or newer. iOS does not allow an app to operate other apps; see the README.
+需要 Android 11（API 30）及以上。iOS 不允许一个 App 操作其他 App，见 README。
 
-## Modules
+## 模块
 
-| Module | Kind | Owns |
+| 模块 | 类型 | 职责 |
 |---|---|---|
-| `core-api` | Kotlin/JVM | The contracts below. Every other module depends on it and only on it. |
-| `core-llm` | Kotlin/JVM | `OpenAiCompatibleClient`: chat completions, images, tool calls, JSON mode, retries |
-| `core-memory` | Kotlin/JVM | `FileMemoryStore`: Basic Memory Markdown notes on disk plus a CJK-aware search index |
-| `core-skills` | Kotlin/JVM | `DirectorySkillRepository`: loads and validates `SKILL.md` and `flow.yaml` |
-| `core-sentinel` | Kotlin/JVM | `PolicySentinel`: allow / ask / deny, task-scoped approvals, audit |
-| `core-agent` | Kotlin/JVM | `PhonePalAgent`: chat orchestration, the operator loop, flows, learning notes |
-| `hands` | Android library | `PhonePalAccessibilityService`, `AccessibilityDevice`, the status overlay |
-| `app` | Android app | Chat UI, settings, skills and memory screens, approvals, debug bridge, traces |
-| `cli/` | Python 3 (stdlib) | Developer tool for skill authors: lint, push, run, logs, traces over adb |
+| `core-api` | Kotlin/JVM | 下文所有接口与数据结构。其他模块都依赖它，且只依赖它 |
+| `core-llm` | Kotlin/JVM | `OpenAiCompatibleClient`：对话补全、图片输入、工具调用、JSON 模式、重试 |
+| `core-memory` | Kotlin/JVM | `FileMemoryStore`：磁盘上的 Basic Memory Markdown 笔记，加上支持中文的检索索引 |
+| `core-skills` | Kotlin/JVM | `DirectorySkillRepository`：加载并校验 `SKILL.md` 和 `flow.yaml` |
+| `core-sentinel` | Kotlin/JVM | `PolicySentinel`：允许 / 询问 / 拒绝，任务级授权，审计 |
+| `core-agent` | Kotlin/JVM | `PhonePalAgent`：聊天编排、操作循环、技能流程、经验笔记 |
+| `hands` | Android 库 | `PhonePalAccessibilityService`、`AccessibilityDevice`、状态悬浮窗 |
+| `app` | Android 应用 | 聊天界面、设置、技能与记忆页面、授权确认、调试桥、轨迹 |
+| `cli/` | Python 3（仅标准库） | 面向技能作者的开发工具：通过 adb 做校验、推送、运行、日志、轨迹 |
 
-The five `core-*` JVM modules never touch Android APIs, so they are unit-tested on any machine.
-
-## One chat turn
+五个 `core-*` JVM 模块不接触任何 Android API，可以在任意机器上跑单元测试。依赖方向：
 
 ```
-user text ──► PhonePalAgent.handle
-               │  system prompt = persona + skill index (name: description) + memory hits
+app ──► core-agent / core-llm / core-memory / core-skills / core-sentinel ──► core-api
+ └────► hands ─────────────────────────────────────────────────────────────► core-api
+```
+
+`app/AppGraph.kt` 是手写的依赖容器，把各模块的实现组装成 `PhonePalAgent`。
+
+### core-agent 内部文件
+
+| 文件 | 内容 |
+|---|---|
+| `PhonePalAgent.kt` | `Agent` 实现：一轮聊天（`handle`）、一次手机任务（`runPhoneTask`）、成功后的经验沉淀 |
+| `AgentTools.kt` | 提供给聊天模型的工具定义（名称与 JSON Schema） |
+| `ChatTools.kt` | 执行聊天模型发起的工具调用 |
+| `TaskRun.kt` | 一次手机任务的运行状态，以及操作循环与流程共用的结果类型 |
+| `OperatorLoop.kt` | 操作循环：观察 → 请求操作模型 → 解析 → Sentinel → 执行 → 卡死检测 |
+| `ScreenText.kt` | 屏幕和操作的文字表示，用于提示词、历史记录和经验笔记 |
+| `FlowRunner.kt` | 按顺序执行技能的 `flow.yaml` 步骤 |
+| `OperatorReplyParser.kt` | 宽松解析操作模型的回复 |
+| `Prompts.kt` | 所有面向模型的中文文本，集中管理便于调优 |
+| `JsonText.kt`、`NoteText.kt` | JSON 读取与笔记渲染的小工具 |
+
+## 一轮聊天
+
+```
+用户输入 ──► PhonePalAgent.handle
+               │  系统提示词 = 人设 + 技能索引（name: description）+ 记忆检索命中
                ▼
-           chat model (role CHAT) with tools:
+           聊天模型（角色 CHAT），可用工具：
                memory_search / memory_read / memory_write / memory_forget / list_skills / phone_task
                │
-               └─ phone_task(goal, skill?) ──► operator loop (below) ──► summary back to the chat model
+               └─ phone_task(goal, skill?) ──► 操作循环（见下）──► 结果摘要返回给聊天模型
 ```
 
-## The operator loop
+## 操作循环
 
 ```
 for step in 0 until maxSteps:
-    stop requested?            -> finish(false, "stopped")
+    用户要求停止？                -> finish(false, "stopped")
     screen = device.observe()
-    screen.secure?             -> ask_user(takeover = true)
-    prompt = goal + skill instructions + skill memory refs + "how-to" memory hits
-           + last historyWindow steps as text + compact node list (≤ maxNodes) + screenshot
-    reply  = operator model (role OPERATOR, jsonMode)
-    action = parse(reply)       # tolerant: fenced JSON, extra keys, nodeId or point
-    finish / ask_user           -> handled by the loop, not the device
-    sentinel.authorize(ctx, action) == false -> event StepBlocked, tell the model next step
+    screen.secure？               -> ask_user(takeover = true)
+    prompt = 目标 + 技能说明 + 技能引用的记忆 + "howto" 记忆命中
+           + 最近 historyWindow 步的文字记录 + 精简节点列表（≤ maxNodes）+ 截图
+    reply  = 操作模型（角色 OPERATOR，jsonMode）
+    action = parse(reply)        # 宽松解析：代码块包裹的 JSON、多余字段、nodeId 或坐标
+    finish / ask_user            -> 由循环处理，不经过设备
+    sentinel.authorize(ctx, action) == false -> 发出 StepBlocked 事件，下一步告知模型
     result = device.perform(action)
-    same fingerprint stuckRepeats times -> tell the model it is stuck; then fail
+    连续 stuckRepeats 次屏幕不变  -> 提示模型已卡住；再次卡住则失败
 ```
 
-Operator reply format (one JSON object, nothing else):
+操作模型的回复格式（只有一个 JSON 对象）：
 
 ```json
 {"thought": "目的地输入框在顶部", "action": {"type": "tap", "nodeId": 12, "target": "目的地输入框", "reason": "先输入目的地"}}
 ```
 
-`action` is an `Action` from `core-api` (`type` is the discriminator: `tap`, `long_press`, `swipe`,
-`type`, `back`, `home`, `launch`, `deeplink`, `wait`, `ask_user`, `finish`). Points are normalized
-0..1000. A tap names either `nodeId` (preferred when the node list has the element) or `point`.
+`action` 是 `core-api` 中的 `Action`，以 `type` 区分：`tap`、`long_press`、`swipe`、`type`、`back`、
+`home`、`launch`、`deeplink`、`wait`、`ask_user`、`finish`。坐标归一化到 0..1000。点击可以指定
+`nodeId`（节点列表中有该元素时优先使用）或 `point`。
 
-After a successful task with `learnFromSuccess`, the agent writes or updates the note
-`howto/<skill-or-app>` (type `howto`) with observations such as
-`- [path] 打开高德 → 打车 → 输入目的地 → 快车 → 停在确认呼叫 #taxi-home`. Before each task the agent
-searches `howto` notes for the goal and puts the hits into the operator prompt.
+开启 `learnFromSuccess` 时，任务成功后 Agent 会写入或更新笔记 `howto/<技能名或包名>`（类型 `howto`），
+内容如 `- [path] 打开高德 → 打车 → 输入目的地 → 快车 → 停在确认呼叫 #taxi-home`。每次任务开始前，
+Agent 会按目标检索 `howto` 笔记，把命中结果放进操作提示词。
 
-## Skills
+## 技能
 
-A skill is a folder: `SKILL.md` (frontmatter + Markdown instructions) and optional `flow.yaml`.
-The format is documented in `core-api/src/main/kotlin/dev/phonepal/api/Skills.kt` and in
-[`docs/skills.md`](skills.md). Examples live in `skills/examples/`.
+技能是一个文件夹：`SKILL.md`（frontmatter + Markdown 说明）和可选的 `flow.yaml`。格式定义见
+`core-api/src/main/kotlin/dev/phonepal/api/Skills.kt` 和 [`docs/skills.md`](skills.md)，示例在
+`skills/examples/`。
 
-Skill folders on the phone: `<external files>/skills/<name>/` where `<external files>` is
-`/sdcard/Android/data/dev.phonepal.app/files`. The app also ships the examples as assets.
+手机上的技能目录：`<external files>/skills/<name>/`，其中 `<external files>` 为
+`/sdcard/Android/data/dev.phonepal.app/files`。App 也会把示例技能作为 assets 一起打包。
 
-## Memory
+## 记忆
 
-Notes are Markdown files under `<external files>/memory/`, in the Basic Memory format
-(frontmatter `title/type/permalink/tags`, `## Observations` with `- [category] content #tag (context)`,
-`## Relations` with `- relation [[Target]]`). The folder can be copied into an Obsidian vault.
-Forgetting deletes the file. PhonePal implements the format itself; it does not embed Basic Memory
-(AGPL-3.0) code.
+笔记是 `<external files>/memory/` 下的 Markdown 文件，采用 Basic Memory 格式：frontmatter 包含
+`title/type/permalink/tags`；`## Observations` 下每行为 `- [category] content #tag (context)`；
+`## Relations` 下每行为 `- relation [[Target]]`。整个目录可以直接拷进 Obsidian 仓库。「忘记」会删除文件。
+PhonePal 自行实现这一格式，没有内嵌 Basic Memory（AGPL-3.0）的代码。
 
-## Safety (Sentinel)
+## 安全（Sentinel）
 
-Evaluated outside the model for every action:
+每个操作都在模型之外评估：
 
-1. `deny`: typing into a password field; actions on a secure (FLAG_SECURE) screen; packages outside
-   the skill's `apps` when the skill lists any (launcher and PhonePal itself excepted).
-2. `ask`: a `tap`/`long_press`/`type` whose target or tapped node text contains a confirmation word:
-   the built-in list (支付, 付款, 确认支付, 立即支付, 转账, 发送, 删除, 下单, 提交订单, 确认呼叫, 呼叫, 购买,
-   pay, send, delete, purchase, order) plus the skill's `confirm_before`; with a skill, a `deeplink`
-   that matches none of the skill's `deeplinks` templates (same scheme and host).
-3. `allow`: everything else.
+1. `deny`（拒绝）：向密码框输入；在受保护（FLAG_SECURE）页面上操作；技能声明了 `apps` 时操作清单之外的
+   包（桌面启动器和 PhonePal 自身除外）。
+2. `ask`（询问）：`tap` / `long_press` / `type` 的目标文字或被操作节点的文字包含确认词。确认词包括内置列表
+   （支付、付款、确认支付、立即支付、转账、发送、删除、下单、提交订单、确认呼叫、呼叫、购买、
+   pay、send、delete、purchase、order）以及技能的 `confirm_before`。在技能内，`deeplink` 与技能的
+   `deeplinks` 模板都不匹配（scheme 和 host 都相同才算匹配）时也要询问。
+3. `allow`（允许）：其他所有操作。
 
-Approvals are ONCE or TASK scoped. Every decision is written to the audit sink.
+授权分为“仅一次”（ONCE）和“本次任务”（TASK）两种范围。每一次决策都写入审计记录。
 
-## Debug bridge (debug builds only)
+## 调试桥（仅 debug 包）
 
-The app registers `dev.phonepal.app.debug.DebugReceiver` (exported only in the debug manifest):
+App 注册了 `dev.phonepal.app.debug.DebugReceiver`（只在 debug 清单中导出）：
 
-| Broadcast action | Extras | Effect |
+| 广播 action | 参数 | 作用 |
 |---|---|---|
-| `dev.phonepal.debug.RUN` | `goal` (string), `skill` (optional), `run_id` (optional) | Runs `Agent.runPhoneTask` in the foreground service |
-| `dev.phonepal.debug.STOP` | | Sets the stop signal of the running task |
-| `dev.phonepal.debug.RELOAD_SKILLS` | | Calls `SkillRepository.reload()` and logs problems |
+| `dev.phonepal.debug.RUN` | `goal`（字符串）、`skill`（可选）、`run_id`（可选） | 在前台服务中执行 `Agent.runPhoneTask` |
+| `dev.phonepal.debug.STOP` | 无 | 给正在运行的任务发送停止信号 |
+| `dev.phonepal.debug.RELOAD_SKILLS` | 无 | 调用 `SkillRepository.reload()` 并记录加载问题 |
 
-Example: `adb shell am broadcast -n dev.phonepal.app/.debug.DebugReceiver -a dev.phonepal.debug.RUN --es goal "打开设置" --es run_id r1`
+示例：`adb shell am broadcast -n dev.phonepal.app/.debug.DebugReceiver -a dev.phonepal.debug.RUN --es goal "打开设置" --es run_id r1`
 
-Logs: logcat tag `PhonePal`, one line per event: `PhonePal: <run_id> <EventKind> <json>`.
+日志：logcat 标签 `PhonePal`，每个事件一行：`PhonePal: <run_id> <EventKind> <json>`。
 
-Traces: `<external files>/traces/<run_id>/trace.jsonl`, one JSON object per line:
+轨迹：`<external files>/traces/<run_id>/trace.jsonl`，每行一个 JSON 对象：
 
 ```json
 {"time": 1761830000000, "run": "r1", "kind": "StepPlanned", "step": 3, "action": {"type": "tap", "nodeId": 12}, "text": null, "ok": null, "decision": null}
 ```
 
-`kind` is the `AgentEvent` class name. `text` carries Reply/NeedsUser/finish summaries and failure
-messages; `ok` carries `ActionResult.ok` or `success`; `decision` is `allow|ask|deny: <reason>`.
-Screenshots of each step are saved beside it as `step-<n>.png`.
+`kind` 是 `AgentEvent` 的类名。`text` 存放 Reply / NeedsUser / finish 的摘要和失败信息；`ok` 存放
+`ActionResult.ok` 或 `success`；`decision` 为 `allow|ask|deny: <原因>`。每一步的截图保存在同目录下的
+`step-<n>.png`。
 
-## Models
+## 模型
 
-Any OpenAI-compatible endpoint. Two settings: the chat model and the operator (screen) model,
-which must accept images. Volcano Ark example: base URL `https://ark.cn-beijing.volces.com/api/v3`,
-key from the `ARK_API_KEY` environment variable on a development machine, typed into Settings on
-the phone. API keys are never written to logs, traces or memory.
+任意兼容 OpenAI 接口的服务都可以。需要两组设置：聊天模型和操作（读屏）模型，后者必须支持图片输入。
+以火山方舟为例：Base URL 为 `https://ark.cn-beijing.volces.com/api/v3`；开发机上 Key 放在环境变量
+`ARK_API_KEY` 中，手机上则填写到「设置」里。API Key 不会写入日志、轨迹或记忆。
 
-## Building
+## 构建
 
-`scripts/gradle.sh <tasks>` keeps build output outside the checkout. JDK 17 and Android SDK 35.
+`scripts/gradle.sh <tasks>` 会把构建产物放到仓库目录之外。需要 JDK 17 和 Android SDK 35。
