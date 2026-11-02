@@ -68,23 +68,38 @@ class StatusOverlay(private val context: Context) {
     }
 
     /**
-     * Hides the overlay while [block] runs (e.g. a screenshot) so it does not appear in the
-     * capture, then restores it. Waits [settleMs] after hiding for the frame to be composed.
+     * Hides the overlay and disables its window's touch interception while [block] runs,
+     * then restores both. View.GONE alone does not remove the WindowManager input surface.
+     * Waits [settleMs] after hiding for the frame and input window update to be applied.
      */
     suspend fun <T> hiddenWhile(settleMs: Long = 80, block: suspend () -> T): T {
-        val wasVisible = withContext(Dispatchers.Main.immediate) {
+        val hidden = withContext(Dispatchers.Main.immediate) {
             val view = root
             if (view != null && view.visibility == View.VISIBLE) {
+                val params = view.layoutParams as WindowManager.LayoutParams
+                val flags = params.flags
+                params.flags = flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                windowManager.updateViewLayout(view, params)
                 view.visibility = View.GONE
-                true
-            } else false
+                view to flags
+            } else null
         }
-        if (!wasVisible) return block()
+        if (hidden == null) return block()
         try {
             delay(settleMs)
             return block()
         } finally {
-            withContext(NonCancellable + Dispatchers.Main.immediate) { root?.visibility = View.VISIBLE }
+            withContext(NonCancellable + Dispatchers.Main.immediate) {
+                val (view, flags) = hidden
+                // hide() clears root before removing the window. Identity is sufficient here;
+                // attachment may lag while WindowManager is applying the layout update.
+                if (root === view) {
+                    val params = view.layoutParams as WindowManager.LayoutParams
+                    params.flags = flags
+                    view.visibility = View.VISIBLE
+                    windowManager.updateViewLayout(view, params)
+                }
+            }
         }
     }
 

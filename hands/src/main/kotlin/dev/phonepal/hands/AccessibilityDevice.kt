@@ -43,7 +43,7 @@ class ServiceNotConnectedException : IllegalStateException(AccessibilityDevice.N
  * @param context any context (the application context is fine); used for package queries and as fallback for starting activities.
  * @param maxNodes cap of the compact node list.
  * @param settleDelayMs pause after every action so the UI can react before the next observation.
- * @param overlay when set, it is hidden while a screenshot is taken.
+ * @param overlay when set, it is hidden during screenshots and dispatched touch gestures.
  */
 class AccessibilityDevice(
     private val serviceProvider: () -> PhonePalAccessibilityService?,
@@ -65,11 +65,17 @@ class AccessibilityDevice(
 
     override suspend fun observe(): ScreenState = mutex.withLock {
         val service = serviceProvider() ?: throw ServiceNotConnectedException()
+        // Keep screenshots and node enumeration on the same unobstructed screen. Restoring the
+        // pill between them can put its Stop button into the model's node list.
+        overlay?.hiddenWhile { observeUnobstructed(service) } ?: observeUnobstructed(service)
+    }
+
+    private suspend fun observeUnobstructed(service: PhonePalAccessibilityService): ScreenState {
         val (w, h) = displaySize(service)
         val shot = captureScreenshot(service)
         val (pkg, nodes) = withContext(Dispatchers.Default) { readNodes(service, w, h) }
         val foreground = service.foreground.value
-        ScreenState(
+        return ScreenState(
             screenshotPng = shot.png,
             widthPx = w,
             heightPx = h,
@@ -87,7 +93,7 @@ class AccessibilityDevice(
             // Android allows one takeScreenshot per second per service.
             val wait = lastScreenshotAt + SCREENSHOT_INTERVAL_MS - SystemClock.uptimeMillis()
             if (wait > 0) delay(wait)
-            val result = overlay?.hiddenWhile { takeScreenshot(service) } ?: takeScreenshot(service)
+            val result = takeScreenshot(service)
             lastScreenshotAt = SystemClock.uptimeMillis()
             when (result) {
                 is RawShot.Ok -> return withContext(Dispatchers.Default) { encode(result.bitmap) }
@@ -176,12 +182,20 @@ class AccessibilityDevice(
     /** Active window first, then other application windows (dialogs, popups) top-down. Skips the IME and overlays. */
     private fun collectRoots(service: PhonePalAccessibilityService): List<AccessibilityNodeInfo> {
         val roots = ArrayList<AccessibilityNodeInfo>()
-        val active = service.rootInActiveWindow
-        if (active != null) roots += active
         val windows = runCatching { service.windows }.getOrDefault(emptyList())
+        val activeRoot = service.rootInActiveWindow
+        val activeWindow = activeRoot?.let { root -> windows.firstOrNull { it.id == root.windowId } }
+        val active = if (activeWindow != null &&
+            activeWindow.type != AccessibilityWindowInfo.TYPE_APPLICATION &&
+            activeWindow.type != AccessibilityWindowInfo.TYPE_SYSTEM
+        ) {
+            AccessibilityNodeTree.recycleCompat(activeRoot)
+            null
+        } else activeRoot
+        if (active != null) roots += active
         for (window in windows.sortedByDescending { it.layer }) {
             if (window.type != AccessibilityWindowInfo.TYPE_APPLICATION && window.type != AccessibilityWindowInfo.TYPE_SYSTEM) continue
-            if (window.isActive || (active != null && window.id == active.windowId)) continue
+            if (active != null && window.id == active.windowId) continue
             // System windows: only permission/system dialogs, not the status or navigation bar.
             if (window.type == AccessibilityWindowInfo.TYPE_SYSTEM && !window.isFocused) continue
             window.root?.let { roots += it }
@@ -266,7 +280,10 @@ class AccessibilityDevice(
         val gesture = GestureDescription.Builder()
             .addStroke(GestureDescription.StrokeDescription(path, 0, durationMs))
             .build()
-        return if (dispatch(service, gesture)) ActionResult(true, what) else ActionResult(false, "$what: gesture cancelled")
+        // Screenshots omit the status pill. Keep the same touch surface while dispatching:
+        // otherwise a top-of-screen tap can hit our Stop button instead of the app underneath.
+        val completed = overlay?.hiddenWhile { dispatch(service, gesture) } ?: dispatch(service, gesture)
+        return if (completed) ActionResult(true, what) else ActionResult(false, "$what: gesture cancelled")
     }
 
     private suspend fun dispatch(service: AccessibilityService, gesture: GestureDescription): Boolean =

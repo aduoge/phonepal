@@ -40,8 +40,11 @@ class DirectorySkillRepositoryTest {
         assertTrue(examples.isDirectory, "missing $examples")
         val result = DirectorySkillRepository(listOf(examples)).reload()
         assertEquals(emptyList(), result.problems)
-        assertEquals(listOf("open-settings-wifi", "set-alarm", "takeout-reorder", "taxi-home"), result.skills.map { it.name })
-        val taxi = result.skills.last()
+        assertEquals(
+            listOf("meituan-takeout-order", "open-settings-wifi", "set-alarm", "takeout-reorder", "taxi-home", "train-ticket-order"),
+            result.skills.map { it.name },
+        )
+        val taxi = result.skills.single { it.name == "taxi-home" }
         assertEquals(listOf("确认呼叫"), taxi.confirmBefore)
         assertEquals(FlowStep.Deeplink("route"), taxi.flow?.steps?.first())
     }

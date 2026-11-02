@@ -57,7 +57,7 @@ scripts/gradle.sh test :app:assembleDebug            # 之后可以离线构建
 
 ## 课堂实践
 
-[用 TRAE 给 PhonePal 加能力](docs/classroom.md)：从聊天操控手机，到修改技能、推送验证，再体验定时提醒。
+[用 TRAE 给 PhonePal 加能力](docs/classroom.md)：围绕美团点餐与12306选票，用 TRAE 修改技能、推送验证，再体验行程提醒。
 
 ## 技能与开发者 CLI
 
