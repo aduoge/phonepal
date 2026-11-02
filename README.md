@@ -55,6 +55,10 @@ scripts/gradle.sh test :app:assembleDebug            # 之后可以离线构建
 
 以火山方舟为例，Base URL 填 `https://ark.cn-beijing.volces.com/api/v3`（也是默认值），模型填方舟上的模型或接入点 ID。
 
+## 课堂实践
+
+[用 TRAE 给 PhonePal 加能力](docs/classroom.md)：从聊天操控手机，到修改技能、推送验证，再体验定时提醒。
+
 ## 技能与开发者 CLI
 
 - 技能格式见 [docs/skills.md](docs/skills.md)，示例在 [skills/examples/](skills/examples/)。
