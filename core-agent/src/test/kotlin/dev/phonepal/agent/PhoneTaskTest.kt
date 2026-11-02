@@ -216,7 +216,7 @@ class PhoneTaskTest {
         h2.operator.fail().fail()
         val r = h2.agent.runPhoneTask("看看", null, h2.events, h2.stop)
         assertFalse(r.success)
-        assertEquals(Prompts.OPERATOR_LLM_FAILED, h2.events.of<AgentEvent.Failed>().single().message)
+        assertEquals("${Prompts.OPERATOR_LLM_FAILED}（错误码 503）", h2.events.of<AgentEvent.Failed>().single().message)
     }
 
     @Test

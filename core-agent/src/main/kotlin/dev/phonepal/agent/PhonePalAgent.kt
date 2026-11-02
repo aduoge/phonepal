@@ -83,7 +83,7 @@ class PhonePalAgent(
             if (!finalText.isNullOrEmpty()) emit(AgentEvent.Reply(taskId, finalText))
             remember(userMessage, finalText?.takeIf { it.isNotEmpty() } ?: lastText)
         } catch (e: LlmException) {
-            emit(AgentEvent.Failed(taskId, Prompts.llmFailed(e.statusCode?.let { "错误码 $it" })))
+            emit(AgentEvent.Failed(taskId, Prompts.llmFailed(e)))
         }
     }
 
@@ -107,8 +107,9 @@ class PhonePalAgent(
         } catch (e: CancellationException) {
             throw e
         } catch (e: LlmException) {
-            listener.onEvent(AgentEvent.Failed(taskId, Prompts.OPERATOR_LLM_FAILED))
-            LoopOutcome(false, Prompts.OPERATOR_LLM_FAILED)
+            val message = Prompts.operatorLlmFailed(e)
+            listener.onEvent(AgentEvent.Failed(taskId, message))
+            LoopOutcome(false, message)
         } catch (e: Exception) {
             // e.g. the accessibility service is not connected: device.observe() throws.
             val message = e.message?.takeIf { it.isNotBlank() } ?: Prompts.UNEXPECTED_ERROR

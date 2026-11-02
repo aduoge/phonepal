@@ -1,6 +1,7 @@
 package dev.phonepal.agent
 
 import dev.phonepal.api.Decision
+import dev.phonepal.api.LlmException
 
 /** All model-facing text of the agent, in Chinese. Kept in one place so it can be tuned without touching the loop. */
 object Prompts {
@@ -23,7 +24,20 @@ object Prompts {
     const val TOOL_ROUNDS_EXCEEDED = "（工具调用次数过多，本轮先到这里。）"
     const val LLM_FAILED = "抱歉，模型服务暂时不可用，请稍后再试。"
 
-    fun llmFailed(detail: String?) = if (detail.isNullOrBlank()) LLM_FAILED else "$LLM_FAILED（$detail）"
+    fun llmFailed(error: LlmException): String {
+        val message = if (error.providerCode == "SetLimitExceeded") "模型服务因账号限额暂停。" else LLM_FAILED
+        return llmErrorDetail(error)?.let { "$message（$it）" } ?: message
+    }
+
+    fun llmErrorDetail(error: LlmException): String? = listOfNotNull(
+        error.statusCode?.let { "错误码 $it" }, error.providerCode,
+        if (error.providerCode == "SetLimitExceeded")
+            "模型已达到账号设置的推理限额，请检查方舟的模型限额、安心体验和账户余额；重试无法恢复"
+        else null,
+    ).joinToString("；").takeIf { it.isNotEmpty() }
+
+    fun operatorLlmFailed(error: LlmException): String =
+        llmErrorDetail(error)?.let { "$OPERATOR_LLM_FAILED（$it）" } ?: OPERATOR_LLM_FAILED
 
     const val OPERATOR_SYSTEM = """你是手机操作员。你看到当前屏幕的截图和无障碍节点列表，每次只决定一步操作。
 只输出一个 JSON 对象，不要输出其他内容：

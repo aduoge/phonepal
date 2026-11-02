@@ -73,7 +73,9 @@ data class ChatResponse(
     val usage: Usage? = null,
 )
 
-class LlmException(message: String, val statusCode: Int? = null, val retryable: Boolean = false, cause: Throwable? = null) :
+class LlmException(message: String, val statusCode: Int? = null, val retryable: Boolean = false, cause: Throwable? = null,
+    val providerCode: String? = null,
+) :
     Exception(message, cause)
 
 interface LlmClient {

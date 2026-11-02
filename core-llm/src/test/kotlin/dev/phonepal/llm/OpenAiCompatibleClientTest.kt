@@ -223,6 +223,41 @@ class OpenAiCompatibleClientTest {
     }
 
     @Test
+    fun `configured inference limit stops immediately without backoff`() = runTest {
+        repeat(3) {
+            server.enqueue(MockResponse().setResponseCode(429)
+                .setBody("""{"error":{"code":"SetLimitExceeded","message":"inference limit reached"}}"""))
+        }
+        val e = assertFailsWith<LlmException> {
+            client().complete(ChatRequest(listOf(ChatMessage.user("x"))))
+        }
+        assertEquals("SetLimitExceeded", e.providerCode)
+        assertFalse(e.retryable)
+        assertEquals(1, server.requestCount)
+        assertTrue(sleeps.isEmpty())
+    }
+
+    @Test
+    fun `keeps structured quota error code without exposing credentials`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(429).setBody("""{"error":{"code":"QuotaExceeded.FreeTier","message":"quota exceeded for $apiKey"}}"""))
+        val e = assertFailsWith<LlmException> {
+            client(maxRetries = 0).complete(ChatRequest(listOf(ChatMessage.user("x"))))
+        }
+        assertEquals(429, e.statusCode)
+        assertEquals("QuotaExceeded.FreeTier", e.providerCode)
+        assertFalse(apiKey in e.message.orEmpty())
+    }
+
+    @Test
+    fun `ignores a provider code containing the API key`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(429).setBody("""{"error":{"code":"$apiKey","message":"failed"}}"""))
+        val e = assertFailsWith<LlmException> {
+            client(maxRetries = 0).complete(ChatRequest(listOf(ChatMessage.user("x"))))
+        }
+        assertNull(e.providerCode)
+    }
+
+    @Test
     fun `does not retry on 401`() = runTest {
         server.enqueue(MockResponse().setResponseCode(401).setBody("""{"error":{"message":"invalid key"}}"""))
         val e = assertFailsWith<LlmException> { client().complete(ChatRequest(listOf(ChatMessage.user("x")))) }

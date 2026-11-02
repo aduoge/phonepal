@@ -81,12 +81,15 @@ class OpenAiCompatibleClient(
                 jsonMode = false
                 continue
             }
-            val retryable = isRetryable(result.code)
+            val providerCode = providerCode(result.body)
+            // A configured spending/inference limit needs an account change, not backoff.
+            val retryable = isRetryable(result.code) && providerCode != "SetLimitExceeded"
             if (retryable && attempt < maxRetries) {
                 sleep(backoff(attempt++, result.retryAfter))
                 continue
             }
-            throw LlmException(redact("HTTP ${result.code} from $url: ${errorDetail(result.body)}"), result.code, retryable)
+            throw LlmException(redact("HTTP ${result.code} from $url: ${errorDetail(result.body)}"), result.code, retryable,
+                providerCode = providerCode)
         }
     }
 
@@ -229,6 +232,16 @@ class OpenAiCompatibleClient(
         }.getOrNull()
         return (message ?: body).take(500).ifBlank { "<empty body>" }
     }
+
+    /** Only carry a short provider identifier into user-facing events, never a raw error body. */
+    private fun providerCode(body: String): String? = runCatching {
+        val root = json.parseToJsonElement(body) as JsonObject
+        val error = root["error"] as? JsonObject
+        (error?.string("code") ?: root.string("code"))?.takeIf {
+            it.matches(Regex("[A-Za-z][A-Za-z0-9_.-]{0,127}")) &&
+                (config.apiKey.isBlank() || !it.contains(config.apiKey))
+        }
+    }.getOrNull()
 
     private fun redact(text: String): String =
         if (config.apiKey.isBlank()) text else text.replace(config.apiKey, "***")

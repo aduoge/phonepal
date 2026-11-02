@@ -77,8 +77,9 @@ internal class OperatorLoop(
             val reply = try {
                 completeWithRetry(request)
             } catch (e: LlmException) {
-                task.emit(AgentEvent.Failed(task.taskId, Prompts.OPERATOR_LLM_FAILED))
-                return LoopOutcome(false, Prompts.OPERATOR_LLM_FAILED)
+                val message = Prompts.operatorLlmFailed(e)
+                task.emit(AgentEvent.Failed(task.taskId, message))
+                return LoopOutcome(false, message)
             }
             feedback.clear()
 
@@ -187,8 +188,9 @@ internal class OperatorLoop(
             val reply = try {
                 completeWithRetry(request)
             } catch (e: LlmException) {
-                task.emit(AgentEvent.Failed(task.taskId, Prompts.OPERATOR_LLM_FAILED))
-                return LoopOutcome(false, Prompts.OPERATOR_LLM_FAILED)
+                val message = Prompts.operatorLlmFailed(e)
+                task.emit(AgentEvent.Failed(task.taskId, message))
+                return LoopOutcome(false, message)
             }
             val obj = JsonText.firstObject(reply.text) ?: return@repeat
             val ok = JsonText.bool(obj, "ok") ?: return@repeat
@@ -198,10 +200,11 @@ internal class OperatorLoop(
         return LoopOutcome(false, Prompts.assertFailed(expectation, null))
     }
 
-    /** One call to the operator model, retried once on [LlmException]. */
+    /** Retry a transient model failure once; account/configuration failures need intervention. */
     suspend fun completeWithRetry(request: ChatRequest): ChatResponse = try {
         operator.complete(request)
     } catch (e: LlmException) {
+        if (!e.retryable) throw e
         operator.complete(request)
     }
 
