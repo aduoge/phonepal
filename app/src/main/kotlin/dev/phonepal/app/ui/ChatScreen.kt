@@ -1,6 +1,9 @@
 package dev.phonepal.app.ui
 
 import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
@@ -42,6 +45,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -66,6 +70,8 @@ import dev.phonepal.app.session.AgentSession
 import dev.phonepal.app.session.ChatItem
 import dev.phonepal.app.session.PendingApproval
 import dev.phonepal.hands.PhonePalAccessibilityService
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun ChatScreen(graph: AppGraph, onOpenSettings: () -> Unit) {
@@ -227,6 +233,19 @@ private fun Bubble(text: String, mine: Boolean) {
 
 @Composable
 private fun ApprovalCard(pending: PendingApproval, session: AgentSession) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var responding by remember(pending.id) { mutableStateOf(false) }
+    fun approve(approvalScope: ApprovalScope) {
+        if (responding) return
+        responding = true
+        scope.launch {
+            // The approved coordinates belong to the app behind this confirmation card.
+            // The operator re-observes and rejects the action if the page has changed.
+            if (context.findActivity()?.moveTaskToBack(true) == true) delay(650)
+            session.answerApproval(ApprovalAnswer(true, approvalScope), pending.id)
+        }
+    }
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer),
         modifier = Modifier.fillMaxWidth().semantics { liveRegion = LiveRegionMode.Assertive },
@@ -235,10 +254,10 @@ private fun ApprovalCard(pending: PendingApproval, session: AgentSession) {
             Text(stringResource(R.string.approval_title), style = MaterialTheme.typography.titleSmall)
             Text(pending.request.prompt, style = MaterialTheme.typography.bodyLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { session.answerApproval(ApprovalAnswer(true, ApprovalScope.ONCE), pending.id) }) {
+                Button(onClick = { approve(ApprovalScope.ONCE) }, enabled = !responding) {
                     Text(stringResource(R.string.approval_once))
                 }
-                FilledTonalButton(onClick = { session.answerApproval(ApprovalAnswer(true, ApprovalScope.TASK), pending.id) }) {
+                FilledTonalButton(onClick = { approve(ApprovalScope.TASK) }, enabled = !responding) {
                     Text(stringResource(R.string.approval_task))
                 }
             }
@@ -247,6 +266,12 @@ private fun ApprovalCard(pending: PendingApproval, session: AgentSession) {
             }
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> if (baseContext === this) null else baseContext.findActivity()
+    else -> null
 }
 
 @Composable

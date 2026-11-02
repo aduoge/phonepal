@@ -18,6 +18,7 @@ import dev.phonepal.api.ScreenState
 import dev.phonepal.api.Sentinel
 import dev.phonepal.api.UserChannel
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 
 /**
  * The operator loop of docs/ARCHITECTURE.md: observe, prompt the operator model, parse, gate
@@ -152,8 +153,24 @@ internal class OperatorLoop(
     /** Gates [action] through Sentinel and performs it; emits StepBlocked or StepExecuted. */
     suspend fun execute(task: TaskRun, action: Action, screen: ScreenState?): Executed {
         val context = GuardContext(task.taskId, task.goal, task.skill, screen, task.steps)
+        val needsConfirmation = sentinel.guard(context, action) is Decision.Ask
         if (!sentinel.authorize(context, action)) {
             val decision = sentinel.guard(context, action).let { if (it is Decision.Allow) Decision.Deny("未获授权") else it }
+            task.emit(AgentEvent.StepBlocked(task.taskId, task.steps, action, decision))
+            return Executed.Blocked(decision)
+        }
+        if (task.stop.stopped) {
+            val decision = Decision.Deny(Prompts.STOPPED)
+            task.emit(AgentEvent.StepBlocked(task.taskId, task.steps, action, decision))
+            return Executed.Blocked(decision)
+        }
+        if (needsConfirmation && !awaitApprovalScreen(task, screen)) {
+            val decision = Decision.Deny("确认期间画面发生变化，未执行原动作；请返回目标应用，重新观察和定位后再确认。")
+            task.emit(AgentEvent.StepBlocked(task.taskId, task.steps, action, decision))
+            return Executed.Blocked(decision)
+        }
+        if (task.stop.stopped) {
+            val decision = Decision.Deny(Prompts.STOPPED)
             task.emit(AgentEvent.StepBlocked(task.taskId, task.steps, action, decision))
             return Executed.Blocked(decision)
         }
@@ -171,6 +188,18 @@ internal class OperatorLoop(
             task.addPath(ScreenText.pathLabel(action, screen))
         }
         return Executed.Done(result)
+    }
+
+    /** App-switch animations can outlast the approval card. Never tap until the original UI returns. */
+    private suspend fun awaitApprovalScreen(task: TaskRun, before: ScreenState?): Boolean {
+        repeat(5) { attempt ->
+            if (task.stop.stopped) return false
+            val after = device.observe()
+            if (after.secure) return false
+            if (ScreenText.matchesApprovalScreen(before, after)) return true
+            if (attempt < 4) delay(300)
+        }
+        return false
     }
 
     /** Flow `assert`: asks the operator model whether the screen shows [expectation]. */

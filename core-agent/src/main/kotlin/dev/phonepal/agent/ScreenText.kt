@@ -6,6 +6,13 @@ import dev.phonepal.api.UiNode
 
 /** Text views of screens and actions for prompts, history and learning notes. */
 internal object ScreenText {
+    /** Approval is valid only for the same visible controls, prices and geometry. */
+    fun matchesApprovalScreen(before: ScreenState?, after: ScreenState): Boolean =
+        before != null && !before.secure && !after.secure && before.packageName != null &&
+            before.packageName == after.packageName && before.activityName == after.activityName &&
+            before.widthPx == after.widthPx && before.heightPx == after.heightPx &&
+            before.nodes.isNotEmpty() && before.nodes == after.nodes
+
     fun section(screen: ScreenState, maxNodes: Int): String {
         val shown = screen.nodes.take(maxNodes)
         return Prompts.screenSection(
