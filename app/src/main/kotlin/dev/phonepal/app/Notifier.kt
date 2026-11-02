@@ -14,7 +14,7 @@ import androidx.core.content.ContextCompat
 import dev.phonepal.app.session.PendingApproval
 import dev.phonepal.app.session.PendingQuestion
 
-/** Notification channels and the three notifications: status (foreground service), approval, question. */
+/** Notification channels and the four notifications: status (foreground service), approval, question, reminder. */
 class Notifier(private val context: Context) {
     private val manager = context.getSystemService(NotificationManager::class.java)
 
@@ -28,6 +28,11 @@ class Notifier(private val context: Context) {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ATTENTION, context.getString(R.string.channel_attention), NotificationManager.IMPORTANCE_HIGH).apply {
                 description = context.getString(R.string.channel_attention_description)
+            },
+        )
+        manager.createNotificationChannel(
+            NotificationChannel(CHANNEL_REMINDERS, context.getString(R.string.channel_reminders), NotificationManager.IMPORTANCE_HIGH).apply {
+                description = context.getString(R.string.channel_reminders_description)
             },
         )
     }
@@ -84,6 +89,22 @@ class Notifier(private val context: Context) {
         manager.notify(ID_QUESTION, notification)
     }
 
+    /** Heads-up notification posted when a reminder_set alarm fires. */
+    fun showReminder(id: Int, text: String) {
+        if (!allowed()) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
+            .setSmallIcon(R.drawable.ic_stat_phonepal)
+            .setContentTitle(context.getString(R.string.reminder_title))
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setAutoCancel(true)
+            .setContentIntent(openApp())
+            .build()
+        manager.notify(id, notification)
+    }
+
     private fun allowed(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
@@ -104,6 +125,7 @@ class Notifier(private val context: Context) {
     companion object {
         const val CHANNEL_STATUS = "status"
         const val CHANNEL_ATTENTION = "attention"
+        const val CHANNEL_REMINDERS = "reminders"
         const val ID_STATUS = 1
         const val ID_APPROVAL = 2
         const val ID_QUESTION = 3

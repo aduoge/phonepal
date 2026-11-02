@@ -5,6 +5,7 @@ import dev.phonepal.api.MemoryStore
 import dev.phonepal.api.Note
 import dev.phonepal.api.Observation
 import dev.phonepal.api.Relation
+import dev.phonepal.api.ReminderScheduler
 import dev.phonepal.api.Skill
 import dev.phonepal.api.SkillRepository
 import dev.phonepal.api.ToolCall
@@ -27,6 +28,7 @@ internal class ChatTools(
     private val memory: MemoryStore,
     private val skills: SkillRepository,
     private val clock: () -> Long,
+    private val reminders: ReminderScheduler,
     private val phoneTask: suspend (goal: String, skill: String?) -> AgentEvent.PhoneTaskFinished,
 ) {
     suspend fun execute(call: ToolCall, taskId: String, emit: (AgentEvent) -> Unit): String = try {
@@ -37,6 +39,7 @@ internal class ChatTools(
             AgentTools.MEMORY_WRITE -> write(args, taskId, emit)
             AgentTools.MEMORY_FORGET -> forget(args, taskId, emit)
             AgentTools.LIST_SKILLS -> listSkills()
+            AgentTools.REMINDER_SET -> reminder(args)
             AgentTools.PHONE_TASK -> phone(args)
             else -> error("未知工具 ${call.name}")
         }
@@ -154,6 +157,20 @@ internal class ChatTools(
             }
         }
     }.toString()
+
+    private fun reminder(args: JsonObject): String {
+        val text = required(args, "text")
+        val raw = required(args, "at")
+        val atMillis = ReminderTimes.parseAtMillis(raw)
+            ?: throw ToolArgumentException("at 不是合法的 ISO-8601 本地时间，应为 2026-11-03T08:00 这样的形式")
+        if (atMillis <= clock()) throw ToolArgumentException("提醒时间 $raw 已经过去，请向用户确认一个将来的时间")
+        reminders.schedule(text, atMillis)
+        return buildJsonObject {
+            put("ok", true)
+            put("text", text)
+            put("at", raw)
+        }.toString()
+    }
 
     private suspend fun phone(args: JsonObject): String {
         val finished = phoneTask(required(args, "goal"), JsonText.string(args, "skill"))

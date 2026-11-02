@@ -19,6 +19,7 @@ import dev.phonepal.api.ModelConfig
 import dev.phonepal.api.ModelRole
 import dev.phonepal.api.Note
 import dev.phonepal.api.Observation
+import dev.phonepal.api.ReminderScheduler
 import dev.phonepal.api.ScreenState
 import dev.phonepal.api.SearchHit
 import dev.phonepal.api.Sentinel
@@ -133,6 +134,15 @@ class FakeUsers(vararg answers: String) : UserChannel {
     }
 }
 
+class FakeReminderScheduler : ReminderScheduler {
+    val scheduled = mutableListOf<Pair<String, Long>>()
+    var failure: Exception? = null
+    override fun schedule(text: String, atMillis: Long) {
+        failure?.let { throw it }
+        scheduled += text to atMillis
+    }
+}
+
 class Events : AgentListener {
     val all = mutableListOf<AgentEvent>()
     override fun onEvent(event: AgentEvent) {
@@ -154,10 +164,12 @@ class Harness(
     val skills: FakeSkills = FakeSkills(),
     val sentinel: FakeSentinel = FakeSentinel(),
     val users: FakeUsers = FakeUsers(),
+    val reminders: FakeReminderScheduler = FakeReminderScheduler(),
     val config: AgentConfig = AgentConfig(),
+    val clock: () -> Long = { 1000L },
 ) {
     private var ids = 0
-    val agent = PhonePalAgent(chat, operator, device, memory, skills, sentinel, users, config, clock = { 1000L }, idFactory = { "t${++ids}" })
+    val agent = PhonePalAgent(chat, operator, device, memory, skills, sentinel, users, reminders, config, clock = clock, idFactory = { "t${++ids}" })
     val events = Events()
     val stop = Stop()
 }

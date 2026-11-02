@@ -82,8 +82,11 @@
     <string name="channel_status_description">PhonePal 正在运行任务时显示</string>
     <string name="channel_attention">需要你处理</string>
     <string name="channel_attention_description">PhonePal 需要你确认或回答问题时提醒</string>
+    <string name="channel_reminders">定时提醒</string>
+    <string name="channel_reminders_description">你设置的提醒到点时通知</string>
     <string name="notification_running">PhonePal 正在工作</string>
     <string name="notification_question">PhonePal 有问题要问你</string>
+    <string name="reminder_title">提醒</string>
 
     <!-- Session messages -->
     <string name="session_not_configured">还没有配置模型，请先在设置里填写聊天模型和操作模型。</string>

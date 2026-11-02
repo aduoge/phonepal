@@ -14,6 +14,7 @@ import dev.phonepal.api.LlmException
 import dev.phonepal.api.MemoryStore
 import dev.phonepal.api.Note
 import dev.phonepal.api.Observation
+import dev.phonepal.api.ReminderScheduler
 import dev.phonepal.api.Sentinel
 import dev.phonepal.api.Skill
 import dev.phonepal.api.SkillRepository
@@ -38,6 +39,7 @@ class PhonePalAgent(
     private val skills: SkillRepository,
     sentinel: Sentinel,
     users: UserChannel,
+    private val reminders: ReminderScheduler,
     private val config: AgentConfig = AgentConfig(),
     private val persona: String = Prompts.DEFAULT_PERSONA,
     private val clock: () -> Long = System::currentTimeMillis,
@@ -51,7 +53,7 @@ class PhonePalAgent(
     override suspend fun handle(userMessage: String, listener: AgentListener, stop: StopSignal) {
         val taskId = idFactory()
         val emit: (AgentEvent) -> Unit = listener::onEvent
-        val tools = ChatTools(memory, skills, clock) { goal, skill -> runPhoneTask(goal, skill, listener, stop) }
+        val tools = ChatTools(memory, skills, clock, reminders) { goal, skill -> runPhoneTask(goal, skill, listener, stop) }
         try {
             val system = ChatMessage.system(systemPrompt(userMessage))
             val past = historyLock.withLock { history.toList() }
@@ -119,6 +121,7 @@ class PhonePalAgent(
 
     private suspend fun systemPrompt(userMessage: String): String = buildString {
         append(persona.trim())
+        append("\n\n").append(Prompts.nowSection(ReminderTimes.promptNow(clock())))
         append("\n\n").append(Prompts.SKILLS_HEADER).append('\n')
         val list = quietly(emptyList()) { skills.list() }
         if (list.isEmpty()) append(Prompts.NO_SKILLS) else list.forEach { append("- ").append(it.name).append(": ").append(it.description).append('\n') }

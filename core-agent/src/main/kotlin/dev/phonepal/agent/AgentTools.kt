@@ -15,6 +15,7 @@ object AgentTools {
     const val MEMORY_WRITE = "memory_write"
     const val MEMORY_FORGET = "memory_forget"
     const val LIST_SKILLS = "list_skills"
+    const val REMINDER_SET = "reminder_set"
     const val PHONE_TASK = "phone_task"
 
     val specs: List<ToolSpec> = listOf(
@@ -55,6 +56,15 @@ object AgentTools {
             schema(listOf("identifier"), "identifier" to str("笔记的 permalink 或标题")),
         ),
         ToolSpec(LIST_SKILLS, "列出所有可用的手机操作技能。", schema(emptyList())),
+        ToolSpec(
+            REMINDER_SET,
+            "设置一条定时提醒：到点后 PhonePal 会在手机上弹出通知。",
+            schema(
+                listOf("text", "at"),
+                "text" to str("提醒内容，如 喝水、带伞"),
+                "at" to str("触发时间，ISO-8601 本地时间（设备时区，不带时区后缀），如 2026-11-03T08:00"),
+            ),
+        ),
         ToolSpec(
             PHONE_TASK, "在用户的手机上完成一个操作任务，返回结果摘要。",
             schema(

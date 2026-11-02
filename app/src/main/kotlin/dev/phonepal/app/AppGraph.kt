@@ -56,6 +56,8 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
 
     val notifier by lazy { Notifier(app) }
 
+    val reminderScheduler by lazy { AlarmReminderScheduler(app) }
+
     val runIds = RunIds()
 
     val traces by lazy {
@@ -113,6 +115,7 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
             skills = skills,
             sentinel = sentinel,
             users = session,
+            reminders = reminderScheduler,
             config = current.agentConfig(),
             idFactory = runIds::next,
         )

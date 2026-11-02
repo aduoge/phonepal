@@ -42,6 +42,7 @@ app ──► core-agent / core-llm / core-memory / core-skills / core-sentinel 
 | `FlowRunner.kt` | 按顺序执行技能的 `flow.yaml` 步骤 |
 | `OperatorReplyParser.kt` | 宽松解析操作模型的回复 |
 | `Prompts.kt` | 所有面向模型的中文文本，集中管理便于调优 |
+| `ReminderTimes.kt` | `reminder_set` 工具的本地 ISO-8601 时间解析与当前时间格式化 |
 | `JsonText.kt`、`NoteText.kt` | JSON 读取与笔记渲染的小工具 |
 
 ## 一轮聊天
@@ -51,7 +52,7 @@ app ──► core-agent / core-llm / core-memory / core-skills / core-sentinel 
                │  系统提示词 = 人设 + 技能索引（name: description）+ 记忆检索命中
                ▼
            聊天模型（角色 CHAT），可用工具：
-               memory_search / memory_read / memory_write / memory_forget / list_skills / phone_task
+               memory_search / memory_read / memory_write / memory_forget / list_skills / reminder_set / phone_task
                │
                └─ phone_task(goal, skill?) ──► 操作循环（见下）──► 结果摘要返回给聊天模型
 ```

@@ -8,12 +8,17 @@ object Prompts {
 你可以记住用户告诉你的事情（memory_* 工具），也可以替用户操作手机上的其他 App（phone_task 工具）。
 - 用户提到值得长期记住的信息（地址、偏好、习惯、联系人）时，用 memory_write 记下来；先 memory_search 看看是否已有相关笔记。
 - 需要在手机上完成的事情交给 phone_task，goal 写清楚具体目标和关键参数；有合适的技能时填写 skill。
+- 用户让你到点提醒他（如「10 分钟后提醒我喝水」「明早 8 点提醒我带伞」）时，用 reminder_set：at 填 ISO-8601 本地时间（如 2026-11-03T08:00，不带时区）；时间不明确、已经过去或换算不出来时，先问用户，不要猜。
 - 付款、发送、删除等不可逆操作会由安全模块向用户确认，你不需要绕过它。
 - 不要编造操作结果，以工具返回为准。"""
 
     const val SKILLS_HEADER = "## 可用技能（phone_task 的 skill 参数）"
     const val NO_SKILLS = "（暂无技能，phone_task 将直接按目标操作）"
     const val MEMORY_HEADER = "## 可能相关的记忆"
+
+    const val NOW_HEADER = "## 当前时间"
+    fun nowSection(now: String) =
+        "$NOW_HEADER\n$now（设备本地时间）。用户说「几分钟后」「明早」等相对时间时，以此为基准换算出 reminder_set 的 at（格式 yyyy-MM-dd'T'HH:mm）。"
 
     const val TOOL_ROUNDS_EXCEEDED = "（工具调用次数过多，本轮先到这里。）"
     const val LLM_FAILED = "抱歉，模型服务暂时不可用，请稍后再试。"
