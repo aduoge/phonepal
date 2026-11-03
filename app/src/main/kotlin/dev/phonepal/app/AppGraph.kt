@@ -16,6 +16,9 @@ import dev.phonepal.hands.MutableStopSignal
 import dev.phonepal.hands.PhonePalAccessibilityService
 import dev.phonepal.llm.LlmClientFactory
 import dev.phonepal.llm.LlmClients
+import dev.phonepal.mcp.McpConfig
+import dev.phonepal.mcp.McpToolProvider
+import dev.phonepal.mcp.UserChannelApprovals
 import dev.phonepal.memory.FileMemoryStore
 import dev.phonepal.sentinel.PolicySentinel
 import dev.phonepal.skills.DirectorySkillRepository
@@ -33,7 +36,8 @@ import java.io.IOException
  * [PhonePalApp.onCreate].
  *
  * Folders (`<external files>` = `/sdcard/Android/data/dev.phonepal.app/files`):
- * `memory/`, `skills/` (user skills, override bundled ones), `traces/`; bundled skills are
+ * `memory/`, `skills/` (user skills, override bundled ones), `traces/`, optional `mcp.json` (MCP servers,
+ * HTTP only; keys are written in the file because Android has no environment); bundled skills are
  * extracted to `<files>/bundled-skills/`.
  */
 class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.default) {
@@ -47,6 +51,7 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     val skillsDir = File(externalRoot, "skills")
     val tracesDir = File(externalRoot, "traces")
     val bundledSkillsDir = File(app.filesDir, "bundled-skills")
+    val mcpFile = File(externalRoot, "mcp.json")
 
     val settings: SettingsStore by lazy { SettingsStore.create(app) }
 
@@ -57,6 +62,15 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     val notifier by lazy { Notifier(app) }
 
     val reminderScheduler by lazy { AlarmReminderScheduler(app) }
+
+    /** MCP tools for the chat model; stdio servers need a desktop and are skipped. Read once per process. */
+    private val mcp: McpToolProvider? by lazy {
+        val loaded = McpConfig.load(mcpFile, emptyMap())
+        loaded.warnings.forEach { Log.w(TAG, "mcp: $it") }
+        val http = loaded.servers.filter { it.enabled && it.url != null }
+        loaded.servers.filter { it.url == null }.forEach { Log.w(TAG, "mcp: ${it.name} uses stdio, not available on Android") }
+        if (http.isEmpty()) null else McpToolProvider(McpConfig(http), UserChannelApprovals(session))
+    }
 
     val runIds = RunIds()
 
@@ -118,6 +132,7 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
             reminders = reminderScheduler,
             config = current.agentConfig(),
             idFactory = runIds::next,
+            externalTools = mcp,
         )
         cachedAgent = current to agent
         return agent

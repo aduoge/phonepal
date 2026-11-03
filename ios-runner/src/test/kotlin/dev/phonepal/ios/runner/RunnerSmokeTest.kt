@@ -3,6 +3,7 @@ package dev.phonepal.ios.runner
 import com.sun.net.httpserver.HttpServer
 import dev.phonepal.api.ChatRequest
 import dev.phonepal.api.ChatResponse
+import dev.phonepal.api.ToolCall
 import dev.phonepal.api.LlmClient
 import dev.phonepal.api.ModelConfig
 import dev.phonepal.api.ModelRole
@@ -38,10 +39,46 @@ class RunnerSmokeTest {
 
     private class FakeWda : AutoCloseable {
         val paths: MutableList<String> = Collections.synchronizedList(mutableListOf())
+        val mcpCalls: MutableList<String> = Collections.synchronizedList(mutableListOf())
         @Volatile var xml = SETTINGS
         @Volatile var bundle = "com.apple.springboard"
         private val png = ByteArrayOutputStream().also { ImageIO.write(BufferedImage(390, 844, BufferedImage.TYPE_INT_RGB), "png", it) }.toByteArray()
         private val server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            createContext("/mcp") { ex ->
+                val request = Json.parseToJsonElement(ex.requestBody.readBytes().toString(Charsets.UTF_8)) as JsonObject
+                val id = request["id"]
+                val method = (request["method"] as JsonPrimitive).content
+                if (id == null) {
+                    ex.sendResponseHeaders(202, -1)
+                    ex.close()
+                    return@createContext
+                }
+                val result: JsonElement = when (method) {
+                    "initialize" -> buildJsonObject { put("protocolVersion", "2025-06-18"); put("capabilities", buildJsonObject {}) }
+                    "tools/list" -> buildJsonObject {
+                        put("tools", buildJsonArray {
+                            add(buildJsonObject {
+                                put("name", "weather"); put("description", "查天气")
+                                put("inputSchema", buildJsonObject { put("type", "object") })
+                                put("annotations", buildJsonObject { put("readOnlyHint", true) })
+                            })
+                            add(buildJsonObject {
+                                put("name", "order"); put("description", "下单")
+                                put("inputSchema", buildJsonObject { put("type", "object") })
+                            })
+                        })
+                    }
+                    else -> {
+                        val name = ((request["params"] as JsonObject)["name"] as JsonPrimitive).content
+                        mcpCalls += name
+                        buildJsonObject { put("content", buildJsonArray { add(buildJsonObject { put("type", "text"); put("text", "北京 晴 18°C") }) }) }
+                    }
+                }
+                val body = buildJsonObject { put("jsonrpc", "2.0"); put("id", id); put("result", result) }.toString().toByteArray()
+                ex.responseHeaders.add("Content-Type", "application/json")
+                ex.sendResponseHeaders(200, body.size.toLong())
+                ex.responseBody.use { it.write(body) }
+            }
             createContext("/") { ex ->
                 ex.requestBody.readBytes()
                 val path = ex.requestURI.toString()
@@ -69,19 +106,34 @@ class RunnerSmokeTest {
         override fun close() = server.stop(0)
     }
 
-    private class Scripted(override val config: ModelConfig, replies: List<String>) : LlmClient {
+    private class Scripted(override val config: ModelConfig, replies: List<String>, chat: List<ChatResponse> = emptyList()) : LlmClient {
         private val queue = ArrayDeque(replies)
-        override suspend fun complete(request: ChatRequest) = ChatResponse(queue.removeFirstOrNull() ?: FINISH_FAIL)
+        private val chatQueue = ArrayDeque(chat)
+        val requests = mutableListOf<ChatRequest>()
+        override suspend fun complete(request: ChatRequest): ChatResponse {
+            requests += request
+            if (config.role == ModelRole.CHAT) return chatQueue.removeFirstOrNull() ?: ChatResponse("好的")
+            return ChatResponse(queue.removeFirstOrNull() ?: FINISH_FAIL)
+        }
     }
 
-    private fun runner(operatorReplies: List<String>, out: ByteArrayOutputStream, err: ByteArrayOutputStream = ByteArrayOutputStream()) = Runner(
+    private var chatLlm: Scripted? = null
+
+    private fun runner(
+        operatorReplies: List<String>,
+        out: ByteArrayOutputStream,
+        err: ByteArrayOutputStream = ByteArrayOutputStream(),
+        chat: List<ChatResponse> = emptyList(),
+    ) = Runner(
         env = mapOf("PHONEPAL_HOME" to home.path, "PHONEPAL_WDA_URL" to wda.url, "ARK_API_KEY" to KEY,
             "PHONEPAL_CHAT_MODEL" to "chat-m", "PHONEPAL_OPERATOR_MODEL" to "op-m"),
         input = BufferedReader(StringReader("")),
         out = PrintStream(out, true, Charsets.UTF_8),
         err = PrintStream(err, true, Charsets.UTF_8),
         hasConsole = false,
-        llm = LlmClientFactory { c -> Scripted(c, if (c.role == ModelRole.OPERATOR) operatorReplies else emptyList()) },
+        llm = LlmClientFactory { c ->
+            Scripted(c, if (c.role == ModelRole.OPERATOR) operatorReplies else emptyList(), chat).also { if (c.role == ModelRole.CHAT) chatLlm = it }
+        },
         userHome = home.path,
     )
 
@@ -142,6 +194,33 @@ class RunnerSmokeTest {
         assertEquals(0, wda.count("/actions"), wda.paths.toString())
         assertTrue("已自动拒绝" in text, text)
         assertTrue("被安全模块拦下" in text, text)
+    }
+
+    @Test fun askUsesMcpToolsAndDeniesWritesWithoutAUser() {
+        File(home, "mcp.json").writeText("""{"mcpServers": {"fake": {"title": "测试服务", "url": "${wda.url}/mcp"}}}""")
+        val out = ByteArrayOutputStream()
+        val code = runner(emptyList(), out, chat = listOf(
+            ChatResponse("", listOf(ToolCall("c1", "fake__weather", "{\"city\":\"北京\"}"), ToolCall("c2", "fake__order", "{}"))),
+            ChatResponse("北京晴，18 度；下单需要你确认。"),
+        )).run(listOf("ask", "北京天气怎么样，顺便帮我下单", "--non-interactive"))
+        val text = out.toString(Charsets.UTF_8)
+        assertEquals(0, code, text)
+        assertEquals(listOf("weather"), wda.mcpCalls.toList(), text)
+        assertTrue("调用工具：测试服务·weather 成功" in text, text)
+        assertTrue("调用工具：测试服务·order 失败" in text, text)
+        assertTrue("已自动拒绝" in text, text)
+        val offered = chatLlm!!.requests.first().tools.map { it.name }
+        assertTrue("fake__weather" in offered && "fake__order" in offered, offered.toString())
+        assertTrue("北京 晴 18°C" in chatLlm!!.requests[1].messages.last { it.role == dev.phonepal.api.ChatRole.TOOL && it.toolCallId == "c1" }.text)
+    }
+
+    @Test fun toolsListsMcpServers() {
+        File(home, "mcp.json").writeText("""{"mcpServers": {"fake": {"title": "测试服务", "url": "${wda.url}/mcp"}}}""")
+        val out = ByteArrayOutputStream()
+        assertEquals(0, runner(emptyList(), out).run(listOf("tools")))
+        val text = out.toString(Charsets.UTF_8)
+        assertTrue("测试服务（fake）：已连接，2 个工具" in text, text)
+        assertTrue("fake__order" in text, text)
     }
 
     @Test fun taskWithoutModelsExitsTwo() {

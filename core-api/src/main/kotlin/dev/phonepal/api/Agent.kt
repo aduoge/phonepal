@@ -22,6 +22,9 @@ sealed class AgentEvent {
 
     data class MemoryUpdated(override val taskId: String, val permalink: String) : AgentEvent()
 
+    /** A [ToolProvider] tool (for example an MCP server) ran; [summary] is short and never contains secrets. */
+    data class ToolCalled(override val taskId: String, val tool: String, val ok: Boolean, val summary: String) : AgentEvent()
+
     data class PhoneTaskFinished(override val taskId: String, val success: Boolean, val summary: String, val steps: Int) : AgentEvent()
 
     data class Failed(override val taskId: String, val message: String) : AgentEvent()

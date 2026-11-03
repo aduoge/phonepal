@@ -8,6 +8,7 @@ PhonePal 是一个跑在 Android 手机上的开源私人助手。你在它的 A
 
 - 需要 Android 11（API 30）及以上。PhonePal 通过无障碍服务读取屏幕并执行操作。
 - iOS 无法在手机上单独运行；可用 Mac + WebDriverAgent 的方式试用，见 [docs/ios.md](docs/ios.md)。
+- 可接入 MCP 服务（高德地图、腾讯地图、滴滴、12306 等），查询和下单类的事情可以不操作手机，见 [docs/mcp.md](docs/mcp.md)。
 - 模型：任意兼容 OpenAI 接口的服务都可以，例如火山方舟、阿里云百炼、OpenRouter、vLLM、Ollama。
   需要配置两个模型：一个聊天模型，一个能看图的屏幕操作模型。
 
@@ -83,6 +84,8 @@ phonepal/
 ├── core-agent/      # Agent：聊天编排、操作循环、技能流程、经验沉淀
 ├── hands/           # Android 无障碍层：读屏、点击、输入、悬浮停止按钮
 ├── ios-hands/、ios-runner/ # iOS WDA 设备接口 / Mac JVM 命令行（使用说明见 docs/ios.md）
+├── core-mcp/              # MCP 客户端，把外部服务的工具交给聊天模型（见 docs/mcp.md）
+├── mcp/                   # MCP 服务器示例清单 servers.example.json
 ├── app/             # Android App：聊天、技能、记忆、设置界面
 ├── cli/             # 技能开发者 CLI
 ├── skills/examples/ # 示例技能，也会打包进 APK

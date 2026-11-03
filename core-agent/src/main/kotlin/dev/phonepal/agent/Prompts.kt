@@ -13,6 +13,9 @@ object Prompts {
 - 付款、发送、删除等不可逆操作会由安全模块向用户确认，你不需要绕过它。
 - 不要编造操作结果，以工具返回为准。"""
 
+    const val EXTERNAL_TOOLS_HINT =
+        "- 名字带「__」的工具来自外部服务（地图、车票、出行、点餐等）。能用这些工具查到或办成的事，优先用工具，不必操作手机；工具的结果以返回内容为准。需要确认的外部操作会先询问用户。"
+
     const val SKILLS_HEADER = "## 可用技能（phone_task 的 skill 参数）"
     const val NO_SKILLS = "（暂无技能，phone_task 将直接按目标操作）"
     const val MEMORY_HEADER = "## 可能相关的记忆"

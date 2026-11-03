@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":core-memory"))
     implementation(project(":core-skills"))
     implementation(project(":core-sentinel"))
+    implementation(project(":core-mcp"))
     implementation(project(":ios-hands"))
     testImplementation(libs.kotlin.test)
     testImplementation(libs.kotlinx.coroutines.test)

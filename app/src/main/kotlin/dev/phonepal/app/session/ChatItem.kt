@@ -64,6 +64,7 @@ object StepText {
         is AgentEvent.StepBlocked -> ChatItem.Progress(id, "${event.stepIndex + 1}. ${action(event.action)}：已拦截（${event.decision.reason}）", false)
         is AgentEvent.NeedsUser -> ChatItem.Question(id, event.question, event.takeover)
         is AgentEvent.MemoryUpdated -> ChatItem.Progress(id, "已更新记忆 ${event.permalink}")
+        is AgentEvent.ToolCalled -> ChatItem.Progress(id, event.summary, event.ok)
         is AgentEvent.PhoneTaskFinished -> ChatItem.Progress(
             id,
             (if (event.success) "任务完成" else "任务未完成") + "（${event.steps} 步）：${event.summary}",

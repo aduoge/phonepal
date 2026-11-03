@@ -23,9 +23,14 @@ data class ModelSettings(val baseUrl: String, val model: String, val apiKey: Str
  */
 data class RunnerConfig(
     val command: String,
+    /** Goal of `task`, question of `ask`, tool name of `call`. */
     val goal: String? = null,
+    /** JSON arguments of `call`. */
+    val toolArguments: String = "{}",
     val skill: String? = null,
     val outDir: File? = null,
+    /** MCP servers file; `$PHONEPAL_HOME/mcp.json` unless `--mcp` is given. */
+    val mcpFile: File? = null,
     val wdaUrl: String,
     val home: File,
     val extraSkillDirs: List<File> = emptyList(),
@@ -40,6 +45,7 @@ data class RunnerConfig(
     val memoryDir get() = File(home, "memory")
     val userSkillsDir get() = File(home, "skills")
     val tracesDir get() = File(home, "traces")
+    val mcpConfigFile get() = mcpFile ?: File(home, "mcp.json")
 
     /** Extra skill folders first, the user's own skills last so they override. */
     val skillDirs get() = extraSkillDirs + userSkillsDir
@@ -63,7 +69,7 @@ data class RunnerConfig(
     companion object {
         const val DEFAULT_WDA_URL = "http://127.0.0.1:8100"
         const val DEFAULT_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
-        val COMMANDS = setOf("check", "dump", "task", "chat")
+        val COMMANDS = setOf("check", "dump", "task", "chat", "ask", "tools", "call")
         private val SECRET_KEY = Regex("key|secret|token|password", RegexOption.IGNORE_CASE)
 
         fun parse(args: List<String>, env: Map<String, String>, userHome: String = System.getProperty("user.home")): RunnerConfig {
@@ -73,6 +79,7 @@ data class RunnerConfig(
             var home: String? = null
             var skill: String? = null
             var out: String? = null
+            var mcp: String? = null
             var maxSteps: Int? = null
             var nonInteractive = false
             val skillDirs = mutableListOf<File>()
@@ -89,6 +96,7 @@ data class RunnerConfig(
                     "--skills" -> skillDirs += File(value(a))
                     "--skill" -> skill = value(a)
                     "--out" -> out = value(a)
+                    "--mcp" -> mcp = value(a)
                     "--max-steps" -> maxSteps = value(a).toIntOrNull()?.takeIf { it in 1..200 }
                         ?: throw UsageException("--max-steps 需要 1..200 的整数")
                     "--non-interactive" -> nonInteractive = true
@@ -102,12 +110,17 @@ data class RunnerConfig(
             }
             val cmd = command ?: throw UsageException("缺少命令")
             if (cmd !in COMMANDS) throw UsageException("未知命令：$cmd")
-            val goal = if (cmd == "task") {
-                positional.singleOrNull()?.takeIf { it.isNotBlank() } ?: throw UsageException("task 需要一个目标，例如 task \"打开设置里的无线局域网页面\"")
+            val goal = if (cmd == "task" || cmd == "ask") {
+                positional.singleOrNull()?.takeIf { it.isNotBlank() }
+                    ?: throw UsageException("$cmd 需要一段文字，例如 $cmd \"" + (if (cmd == "task") "打开设置里的无线局域网页面" else "明天北京天气怎么样") + "\"")
+            } else if (cmd == "call") {
+                if (positional.size !in 1..2) throw UsageException("call 需要工具名和可选的 JSON 参数，例如 call aihot__get_hot '{}'")
+                positional[0]
             } else {
                 if (positional.isNotEmpty()) throw UsageException("多余的参数：${positional.joinToString(" ")}")
                 null
             }
+            val toolArguments = if (cmd == "call") positional.getOrNull(1) ?: "{}" else "{}"
             if (cmd == "dump" && out == null) throw UsageException("dump 需要 --out DIR")
 
             val homeDir = File(home ?: env["PHONEPAL_HOME"]?.takeIf { it.isNotBlank() } ?: File(userHome, ".phonepal-ios").path)
@@ -120,8 +133,10 @@ data class RunnerConfig(
             return RunnerConfig(
                 command = cmd,
                 goal = goal,
+                toolArguments = toolArguments,
                 skill = skill,
                 outDir = out?.let(::File),
+                mcpFile = mcp?.let(::File),
                 wdaUrl = wda ?: env["PHONEPAL_WDA_URL"]?.takeIf { it.isNotBlank() } ?: DEFAULT_WDA_URL,
                 home = homeDir,
                 extraSkillDirs = skillDirs,

@@ -7,6 +7,8 @@ import dev.phonepal.ios.IosPlatform
 import dev.phonepal.ios.WdaClient
 import dev.phonepal.ios.WdaDevice
 import dev.phonepal.llm.LlmClientFactory
+import dev.phonepal.mcp.McpConfig
+import dev.phonepal.mcp.McpToolProvider
 import dev.phonepal.memory.FileMemoryStore
 import dev.phonepal.sentinel.PolicySentinel
 import dev.phonepal.skills.DirectorySkillRepository
@@ -18,10 +20,25 @@ class RunnerSession(
     val sentinel: PolicySentinel,
     val trace: TraceRecorder,
     val skillCount: Int,
+    /** MCP tools offered to the chat model, null when `mcp.json` configures no usable server. */
+    val mcp: McpToolProvider?,
 )
 
+/** MCP servers from [RunnerConfig.mcpConfigFile]; warnings never contain the substituted keys. */
+fun loadMcp(config: RunnerConfig, env: Map<String, String>, approvals: ConsoleChannels, out: PrintStream): McpToolProvider? {
+    val mcp = McpConfig.load(config.mcpConfigFile, env)
+    mcp.warnings.forEach { out.println("MCP：$it") }
+    return mcp.takeIf { c -> c.servers.any { it.enabled } }?.let { McpToolProvider(it, approvals) }
+}
+
 /** Wires the core modules to a WDA-backed iPhone, as AppGraph does for the Android app. */
-suspend fun assemble(config: RunnerConfig, channels: ConsoleChannels, llm: LlmClientFactory, out: PrintStream): RunnerSession {
+suspend fun assemble(
+    config: RunnerConfig,
+    channels: ConsoleChannels,
+    llm: LlmClientFactory,
+    out: PrintStream,
+    env: Map<String, String> = System.getenv(),
+): RunnerSession {
     config.memoryDir.mkdirs()
     config.userSkillsDir.mkdirs()
     val trace = TraceRecorder(config.tracesDir, config.secrets)
@@ -34,6 +51,7 @@ suspend fun assemble(config: RunnerConfig, channels: ConsoleChannels, llm: LlmCl
         launcherPackages = IosPlatform.LAUNCHER_BUNDLES,
         selfPackage = IosPlatform.runnerBundleId(config.wdaBundleId),
     )
+    val mcp = loadMcp(config, env, channels, out)
     val agent = PhonePalAgent(
         chat = llm.create(config.chat.toModelConfig(ModelRole.CHAT)),
         operator = llm.create(config.operator.toModelConfig(ModelRole.OPERATOR)),
@@ -44,6 +62,7 @@ suspend fun assemble(config: RunnerConfig, channels: ConsoleChannels, llm: LlmCl
         users = channels,
         reminders = MacReminders(out),
         config = AgentConfig(maxSteps = config.maxSteps, operatorNotes = IosPlatform.OPERATOR_NOTES),
+        externalTools = mcp,
     )
-    return RunnerSession(agent, sentinel, trace, loaded.skills.size)
+    return RunnerSession(agent, sentinel, trace, loaded.skills.size, mcp)
 }

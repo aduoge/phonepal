@@ -4,6 +4,8 @@ import dev.phonepal.api.ApprovalAnswer
 import dev.phonepal.api.ApprovalGateway
 import dev.phonepal.api.ApprovalRequest
 import dev.phonepal.api.ApprovalScope
+import dev.phonepal.api.ToolApprovalGateway
+import dev.phonepal.api.ToolApprovalRequest
 import dev.phonepal.api.UserChannel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
@@ -21,7 +23,7 @@ class ConsoleChannels(
     private val input: BufferedReader,
     private val out: PrintStream,
     val interactive: Boolean,
-) : ApprovalGateway, UserChannel {
+) : ApprovalGateway, ToolApprovalGateway, UserChannel {
     private val mutex = Mutex()
 
     override suspend fun request(request: ApprovalRequest): ApprovalAnswer = mutex.withLock {
@@ -37,6 +39,18 @@ class ConsoleChannels(
             "t" -> ApprovalAnswer(true, ApprovalScope.TASK)
             else -> ApprovalAnswer(false).also { out.println("已拒绝。") }
         }
+    }
+
+    override suspend fun approve(request: ToolApprovalRequest): Boolean = mutex.withLock {
+        val args = request.argumentsJson.let { if (it.length > 300) it.take(300) + "…" else it }
+        out.println("需要确认：调用「${request.title ?: request.tool}」（${request.server}），参数 $args（${request.reason}）")
+        if (!interactive) {
+            out.println("已自动拒绝（非交互模式）。")
+            return@withLock false
+        }
+        out.print("[y=允许 / 其他=拒绝] > ")
+        out.flush()
+        (readLine()?.trim()?.lowercase() in setOf("y", "yes")).also { if (!it) out.println("已拒绝。") }
     }
 
     override suspend fun ask(taskId: String, question: String, takeover: Boolean): String = mutex.withLock {

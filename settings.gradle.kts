@@ -23,6 +23,7 @@ include(
     ":core-skills",
     ":core-sentinel",
     ":core-agent",
+    ":core-mcp",
     ":ios-hands",
     ":ios-runner",
 )
