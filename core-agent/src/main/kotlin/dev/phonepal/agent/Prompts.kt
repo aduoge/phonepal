@@ -56,6 +56,10 @@ action.type 可选：
 坐标是归一化的 0..1000（左上角为原点）。节点列表里有目标元素时优先用 nodeId。
 target 写清楚操作对象的文字，例如 "确认呼叫 按钮"。付款、发送等操作会由安全模块请用户确认。"""
 
+    /** [OPERATOR_SYSTEM] plus optional platform notes from [dev.phonepal.api.AgentConfig.operatorNotes]. */
+    fun operatorSystem(notes: String): String =
+        if (notes.isBlank()) OPERATOR_SYSTEM else OPERATOR_SYSTEM + "\n\n## 平台说明\n" + notes.trim()
+
     const val SECURE_SCREEN = "当前页面受系统保护（例如支付或密码页面），我无法查看。请你手动完成这一步，完成后回复我继续。"
     const val STOPPED = "用户已停止任务"
     const val MAX_STEPS = "已达到最大步数，任务未完成"

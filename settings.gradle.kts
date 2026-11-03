@@ -23,6 +23,11 @@ include(
     ":core-skills",
     ":core-sentinel",
     ":core-agent",
-    ":hands",
-    ":app",
+    ":ios-hands",
+    ":ios-runner",
 )
+
+// The iOS runner is built on a Mac that usually has no Android SDK: -Pphonepal.iosOnly=true skips the Android modules.
+if (providers.gradleProperty("phonepal.iosOnly").orNull != "true") {
+    include(":hands", ":app")
+}

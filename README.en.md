@@ -8,7 +8,8 @@ New scenarios are **skills**: small `SKILL.md` + `flow.yaml` folders you can pus
 the APK.
 
 - Android 11 (API 30) or newer. It uses an accessibility service to read the screen and act.
-- iOS is not supported: iOS does not let one app read or operate other apps.
+- iOS cannot run it on the phone alone (one app may not operate other apps). You can try it from a Mac
+  that drives the iPhone through WebDriverAgent; see [docs/ios.md](docs/ios.md) (Chinese).
 - Models: any OpenAI-compatible endpoint (Volcano Ark, Bailian, OpenRouter, vLLM, Ollama ...). You
   configure a chat model and a screen ("operator") model that accepts images.
 

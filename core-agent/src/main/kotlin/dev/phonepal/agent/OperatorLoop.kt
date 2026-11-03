@@ -257,7 +257,7 @@ internal class OperatorLoop(
             add(Prompts.NEXT_STEP)
         }
         return ChatRequest(
-            messages = listOf(ChatMessage.system(Prompts.OPERATOR_SYSTEM), userMessage(sections.joinToString("\n\n"), screen)),
+            messages = listOf(ChatMessage.system(Prompts.operatorSystem(config.operatorNotes)), userMessage(sections.joinToString("\n\n"), screen)),
             jsonMode = true,
         )
     }

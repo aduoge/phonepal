@@ -46,6 +46,8 @@ data class AgentConfig(
     val maxNodes: Int = 120,
     /** Write a "how to" note into memory after a successful phone task. */
     val learnFromSuccess: Boolean = true,
+    /** Platform notes appended to the operator system prompt, e.g. how back and launch work on iOS. */
+    val operatorNotes: String = "",
 )
 
 /** Cooperative cancellation from the overlay's Stop button. */
