@@ -19,6 +19,7 @@ App。框架负责“手”（无障碍操作）、“眼”（读屏）、记�
 | `hands` | Android 库 | `PhonePalAccessibilityService`、`AccessibilityDevice`、状态悬浮窗 |
 | `app` | Android 应用 | 聊天界面、设置、技能与记忆页面、授权确认、调试桥、轨迹 |
 | `core-mcp` | Kotlin/JVM | `McpToolProvider`：把 MCP 服务器（高德、滴滴等）的工具交给聊天模型，带确认策略与密钥脱敏，见 [mcp.md](mcp.md) |
+| `web-server` | Kotlin/JVM 应用 | 网页版：同源移动端网页 + `/api/*`（SSE 聊天、确认、MCP 目录与测试），每个会话一个不操作手机的 `PhonePalAgent`，见 [web.md](web.md) |
 | `ios-hands` | Kotlin/JVM | `WdaDevice`：通过 iPhone 上的 WebDriverAgent 实现 `Device`（截图、界面树、点击、输入、返回） |
 | `ios-runner` | Kotlin/JVM 命令行 | Mac 上的 `ios-runner`：把 `core-*` 与 `WdaDevice` 组装起来，终端确认、轨迹、提醒 |
 | `cli/` | Python 3（仅标准库） | 面向技能作者的开发工具：通过 adb 做校验、推送、运行、日志、轨迹 |

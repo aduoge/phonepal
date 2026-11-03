@@ -57,10 +57,13 @@ class PhonePalAgent(
     override suspend fun handle(userMessage: String, listener: AgentListener, stop: StopSignal) {
         val taskId = idFactory()
         val emit: (AgentEvent) -> Unit = listener::onEvent
-        val tools = ChatTools(memory, skills, clock, reminders, externalTools) { goal, skill -> runPhoneTask(goal, skill, listener, stop) }
+        val tools = ChatTools(memory, skills, clock, reminders, externalTools, phoneTasks = config.phoneTasks) { goal, skill ->
+            runPhoneTask(goal, skill, listener, stop)
+        }
         try {
-            val toolSpecs = AgentTools.specs + externalSpecs()
-            val system = ChatMessage.system(systemPrompt(userMessage, hasExternalTools = toolSpecs.size > AgentTools.specs.size))
+            val builtIn = builtInSpecs()
+            val toolSpecs = builtIn + externalSpecs()
+            val system = ChatMessage.system(systemPrompt(userMessage, hasExternalTools = toolSpecs.size > builtIn.size))
             val past = historyLock.withLock { history.toList() }
             val turn = mutableListOf(ChatMessage.user(userMessage))
             var lastText: String? = null
@@ -124,6 +127,9 @@ class PhonePalAgent(
         if (outcome.success && config.learnFromSuccess) quietly(Unit) { learn(task) }
         return finish(outcome.success, outcome.summary, task.steps)
     }
+
+    private fun builtInSpecs(): List<ToolSpec> =
+        if (config.phoneTasks) AgentTools.specs else AgentTools.specs.filter { it.name != AgentTools.PHONE_TASK }
 
     /** External tools that do not clash with built-in names; a failing provider simply offers nothing. */
     private suspend fun externalSpecs(): List<ToolSpec> {

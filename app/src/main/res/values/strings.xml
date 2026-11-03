@@ -7,6 +7,7 @@
     <string name="nav_skills">技能</string>
     <string name="nav_memory">记忆</string>
     <string name="nav_settings">设置</string>
+    <string name="nav_services">服务</string>
     <string name="back">返回</string>
 
     <!-- Chat -->
@@ -92,4 +93,30 @@
     <string name="session_not_configured">还没有配置模型，请先在设置里填写聊天模型和操作模型。</string>
     <string name="session_busy">已有任务在运行，请稍后再试。</string>
     <string name="session_stopped">已停止</string>
+
+    <!-- MCP services -->
+    <string name="mcp_title">外部服务</string>
+    <string name="mcp_intro">勾选后，PhonePal 可以直接调用这些服务查询或办事，不用操作手机。会修改数据或产生费用的操作，会先在聊天里问你。</string>
+    <string name="mcp_enabled_count">已启用 %1$d 个</string>
+    <string name="mcp_recommended">推荐组合</string>
+    <string name="mcp_test">测试连接</string>
+    <string name="mcp_testing">正在连接…</string>
+    <string name="mcp_official">官方</string>
+    <string name="mcp_community">社区</string>
+    <string name="mcp_apply_key">去申请</string>
+    <string name="mcp_connected">已连接，%1$d 个工具</string>
+    <string name="mcp_failed">连接失败：%1$s</string>
+    <string name="mcp_missing_key">还没有填写：%1$s</string>
+    <string name="mcp_custom_title">其他 MCP 服务</string>
+    <string name="mcp_custom_hint">只添加你信任的服务。地址需要是 https，支持 Streamable HTTP 的 MCP 服务都可以接入。</string>
+    <string name="mcp_custom_name">名称</string>
+    <string name="mcp_custom_url">地址（https://…）</string>
+    <string name="mcp_custom_auth">Authorization 请求头（可选）</string>
+    <string name="mcp_custom_confirm">调用前确认</string>
+    <string name="mcp_confirm_writes">会修改数据时确认</string>
+    <string name="mcp_confirm_all">每次都确认</string>
+    <string name="mcp_confirm_none">从不确认</string>
+    <string name="mcp_custom_add">添加</string>
+    <string name="mcp_custom_invalid">%1$s</string>
+    <string name="mcp_remove">删除</string>
 </resources>

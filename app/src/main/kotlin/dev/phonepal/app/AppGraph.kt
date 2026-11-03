@@ -16,8 +16,13 @@ import dev.phonepal.hands.MutableStopSignal
 import dev.phonepal.hands.PhonePalAccessibilityService
 import dev.phonepal.llm.LlmClientFactory
 import dev.phonepal.llm.LlmClients
+import dev.phonepal.app.settings.McpSettingsStore
+import dev.phonepal.mcp.McpCatalog
 import dev.phonepal.mcp.McpConfig
+import dev.phonepal.mcp.McpPlatform
+import dev.phonepal.mcp.McpSelection
 import dev.phonepal.mcp.McpToolProvider
+import dev.phonepal.mcp.ServerStatus
 import dev.phonepal.mcp.UserChannelApprovals
 import dev.phonepal.memory.FileMemoryStore
 import dev.phonepal.sentinel.PolicySentinel
@@ -63,13 +68,36 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
 
     val reminderScheduler by lazy { AlarmReminderScheduler(app) }
 
-    /** MCP tools for the chat model; stdio servers need a desktop and are skipped. Read once per process. */
-    private val mcp: McpToolProvider? by lazy {
-        val loaded = McpConfig.load(mcpFile, emptyMap())
-        loaded.warnings.forEach { Log.w(TAG, "mcp: $it") }
-        val http = loaded.servers.filter { it.enabled && it.url != null }
-        loaded.servers.filter { it.url == null }.forEach { Log.w(TAG, "mcp: ${it.name} uses stdio, not available on Android") }
-        if (http.isEmpty()) null else McpToolProvider(McpConfig(http), UserChannelApprovals(session))
+    /** Services ticked on the 服务 screen; keys live in the encrypted settings file. */
+    val mcpSettings: McpSettingsStore by lazy { McpSettingsStore.create(app, settings.secret) }
+
+    private var cachedMcp: Pair<McpSelection, McpToolProvider?>? = null
+
+    /** MCP config of [selection] plus the HTTP servers of the optional `mcp.json` (stdio needs a desktop). */
+    fun mcpConfig(selection: McpSelection): McpConfig {
+        val ticked = McpCatalog.builtIn.toConfig(selection, McpPlatform.ANDROID)
+        val file = McpConfig.load(mcpFile, emptyMap())
+        val fileServers = file.servers.filter { it.enabled && it.url != null && ticked.servers.none { t -> t.name == it.name } }
+        (ticked.warnings + file.warnings).forEach { Log.w(TAG, "mcp: $it") }
+        return McpConfig(ticked.servers + fileServers, ticked.warnings + file.warnings)
+    }
+
+    /** The provider for [selection], rebuilt (and the old one closed) when the ticked services change. */
+    @Synchronized
+    private fun mcpFor(selection: McpSelection): McpToolProvider? {
+        cachedMcp?.let { (s, provider) -> if (s == selection) return provider }
+        cachedMcp?.second?.close()
+        val config = mcpConfig(selection)
+        val provider = if (config.servers.isEmpty()) null else McpToolProvider(config, UserChannelApprovals(session))
+        cachedMcp = selection to provider
+        return provider
+    }
+
+    /** Connects to the services of [selection] once, for the 测试连接 button; never kept. */
+    suspend fun testMcp(selection: McpSelection): List<ServerStatus> {
+        val config = mcpConfig(selection)
+        if (config.servers.isEmpty()) return emptyList()
+        return McpToolProvider(config, { false }).use { it.status(refresh = true) }
     }
 
     val runIds = RunIds()
@@ -113,14 +141,15 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     lateinit var startup: Deferred<Unit>
         private set
 
-    private var cachedAgent: Pair<AppSettings, Agent>? = null
+    private var cachedAgent: Pair<Pair<AppSettings, McpSelection>, Agent>? = null
 
     /** The agent for the current settings, rebuilt when they change; null until both models are configured. */
     @Synchronized
     fun agent(): Agent? {
         val current = settings.current
         if (!current.configured) return null
-        cachedAgent?.let { (s, agent) -> if (s == current) return agent }
+        val key = current to mcpSettings.current
+        cachedAgent?.let { (k, agent) -> if (k == key) return agent }
         val agent = PhonePalAgent(
             chat = llm.create(current.chat.toModelConfig(ModelRole.CHAT)),
             operator = llm.create(current.operator.toModelConfig(ModelRole.OPERATOR)),
@@ -132,9 +161,9 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
             reminders = reminderScheduler,
             config = current.agentConfig(),
             idFactory = runIds::next,
-            externalTools = mcp,
+            externalTools = mcpFor(key.second),
         )
-        cachedAgent = current to agent
+        cachedAgent = key to agent
         return agent
     }
 

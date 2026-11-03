@@ -31,6 +31,7 @@ internal class ChatTools(
     private val clock: () -> Long,
     private val reminders: ReminderScheduler,
     private val external: ToolProvider?,
+    private val phoneTasks: Boolean = true,
     private val phoneTask: suspend (goal: String, skill: String?) -> AgentEvent.PhoneTaskFinished,
 ) {
     suspend fun execute(call: ToolCall, taskId: String, emit: (AgentEvent) -> Unit): String = try {
@@ -42,7 +43,7 @@ internal class ChatTools(
             AgentTools.MEMORY_FORGET -> forget(args, taskId, emit)
             AgentTools.LIST_SKILLS -> listSkills()
             AgentTools.REMINDER_SET -> reminder(args)
-            AgentTools.PHONE_TASK -> phone(args)
+            AgentTools.PHONE_TASK -> if (phoneTasks) phone(args) else error("这里不能操作手机，请用其他工具或告诉用户自己操作")
             else -> external(call, taskId, emit)
         }
     } catch (e: CancellationException) {

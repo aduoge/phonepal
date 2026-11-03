@@ -26,6 +26,7 @@ include(
     ":core-mcp",
     ":ios-hands",
     ":ios-runner",
+    ":web-server",
 )
 
 // The iOS runner is built on a Mac that usually has no Android SDK: -Pphonepal.iosOnly=true skips the Android modules.

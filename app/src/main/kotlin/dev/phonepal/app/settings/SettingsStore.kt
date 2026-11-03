@@ -14,7 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
  * Persists [AppSettings]: everything but the API keys in [plain], the keys only in [secret]
  * (EncryptedSharedPreferences in the app). Nothing here logs a key.
  */
-class SettingsStore(private val plain: SharedPreferences, private val secret: SharedPreferences) {
+class SettingsStore(private val plain: SharedPreferences, internal val secret: SharedPreferences) {
 
     private val _settings = MutableStateFlow(load())
     val settings: StateFlow<AppSettings> = _settings.asStateFlow()

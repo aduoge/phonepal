@@ -51,6 +51,8 @@ data class AgentConfig(
     val learnFromSuccess: Boolean = true,
     /** Platform notes appended to the operator system prompt, e.g. how back and launch work on iOS. */
     val operatorNotes: String = "",
+    /** Offer `phone_task` to the chat model. Off where there is no phone to operate, e.g. the web version. */
+    val phoneTasks: Boolean = true,
 )
 
 /** Cooperative cancellation from the overlay's Stop button. */

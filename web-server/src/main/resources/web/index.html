@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="PhonePal">
+  <meta name="theme-color" content="#f5f7fb" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111821" media="(prefers-color-scheme: dark)">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="style.css">
+  <title>PhonePal · 你的随身助手</title>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="app-header"><div class="brand"><img src="icon.svg" width="36" height="36" alt=""><div><strong>PhonePal</strong><span>把日常小事，交给助手</span></div></div><span id="connection" role="status">正在连接…</span></header>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <main>
+    <section id="page-chat" class="page chat-page" aria-label="聊天">
+      <div id="messages" class="messages" role="log" aria-label="聊天记录" aria-live="polite" aria-relevant="additions text"></div>
+      <div id="empty-chat" class="empty-chat"><div class="hello-icon" aria-hidden="true">✦</div><h1>你好，想做点什么？</h1><p>查天气、规划出行，或看看新鲜事。</p><div class="examples"><button type="button" data-example="明天北京天气怎么样">明天北京天气怎么样 <span>↗</span></button><button type="button" data-example="从望京到首都机场怎么走">从望京到首都机场怎么走 <span>↗</span></button><button type="button" data-example="今天有什么 AI 热点">今天有什么 AI 热点 <span>↗</span></button></div></div>
+      <div id="model-hint" class="model-hint" hidden>先设置模型，就能开始聊天。<button type="button" id="go-settings">去设置</button></div>
+      <div id="thinking" class="thinking" role="status" hidden><span class="thinking-dot"></span>思考中…</div>
+      <form id="chat-form" class="composer"><label class="sr-only" for="message-input">发送消息</label><textarea id="message-input" placeholder="说说你想做的事…" rows="1" enterkeyhint="enter" maxlength="20000"></textarea><button id="send-button" type="submit" class="primary">发送</button></form>
+    </section>
+    <section id="page-services" class="page scroll-page" aria-label="服务" hidden>
+      <div class="page-heading"><div><h1>连接你的服务</h1><p>勾选后，助手就能帮你办事。</p></div><span id="enabled-count" class="badge">已启用 0</span></div>
+      <div class="toolbar"><button id="recommend" type="button">推荐组合：高德 + AI 热点</button><button id="test-mcp" type="button" class="primary">测试连接</button></div>
+      <div id="test-notice" class="muted" role="status"></div>
+      <div id="catalog"><p class="muted">正在加载服务目录…</p></div>
+      <section class="panel"><h2>添加其他 MCP 服务</h2><p class="muted">只添加你信任的服务。</p><form id="custom-form" class="fields">
+        <label>服务名称<input id="custom-title" required maxlength="100" placeholder="例如：我的任务清单"></label>
+        <label>服务地址（https）<input id="custom-url" type="url" required placeholder="https://example.com/mcp" autocomplete="off" spellcheck="false"></label>
+        <label>Authorization 头（可选）<span class="secret-field"><input id="custom-auth" type="password" placeholder="例如：Bearer …" autocomplete="off" spellcheck="false"><button type="button" data-reveal="custom-auth" aria-label="显示 Authorization 头">显示</button></span></label>
+        <label>调用确认<select id="custom-confirm"><option value="writes">会修改数据时确认（推荐）</option><option value="all">每次都确认</option><option value="none">从不确认</option></select></label>
+        <button type="submit" class="primary">添加服务</button>
+      </form><div id="custom-list"></div></section>
+    </section>
+    <section id="page-settings" class="page scroll-page" aria-label="设置" hidden>
+      <div class="page-heading"><div><h1>让助手准备好</h1><p>填好模型信息，就可以聊天了。</p></div></div>
+      <section class="panel"><h2>模型设置</h2><form id="model-form" class="fields">
+        <label>模型地址<input id="model-url" type="url" required placeholder="https://ark.cn-beijing.volces.com/api/v3" autocomplete="off" spellcheck="false"></label>
+        <label>模型名或接入点 ID<input id="model-name" required placeholder="例如：你的接入点 ID" autocomplete="off" spellcheck="false"></label>
+        <label>API Key<span class="secret-field"><input id="model-key" type="password" required autocomplete="off" spellcheck="false" placeholder="粘贴你的 API Key"><button type="button" data-reveal="model-key" aria-label="显示 API Key">显示</button></span></label>
+        <p class="muted">Key 只保存在这台手机的浏览器里，每次对话时发给 PhonePal 服务器转发，服务器不保存。</p>
+        <button type="submit" class="primary">保存模型设置</button><span id="model-status" class="muted" role="status"></span>
+      </form></section>
+      <section class="panel"><h2>添加到主屏幕</h2><p>用 Safari 打开本页，点底部的「分享」，再选「添加到主屏幕」。以后轻点 PhonePal 图标就能打开。</p><p class="muted">请使用同一个地址，设置和聊天记录会保存在这个浏览器里。</p></section>
+      <section class="panel"><h2>本地数据</h2><p class="muted">聊天记录最多保留 200 条。清除数据后，需要重新填写 Key。</p><div class="data-actions"><button id="clear-chat" type="button">清空聊天记录</button><button id="clear-data" class="danger" type="button">清除所有本地数据</button></div></section>
+      <p class="version">PhonePal <span id="version">版本加载中…</span></p>
+    </section>
+  </main>
+  <nav class="bottom-nav" aria-label="主导航"><button type="button" data-tab="chat" class="active" aria-current="page"><span aria-hidden="true">◌</span>聊天</button><button type="button" data-tab="services"><span aria-hidden="true">⌘</span>服务</button><button type="button" data-tab="settings"><span aria-hidden="true">⚙</span>设置</button></nav>
+  <div id="access-overlay" class="overlay" hidden><section class="access-card" role="dialog" aria-modal="true" aria-labelledby="access-title"><h2 id="access-title">欢迎使用 PhonePal</h2><p id="access-description">请输入服务器的访问码。</p><form id="access-form" class="fields"><label>访问码<input id="access-input" type="password" required autocomplete="off"></label><div class="toolbar"><button type="button" id="access-cancel">取消</button><button type="submit" class="primary">连接</button></div></form></section></div>
+  <noscript>请在 Safari 设置中开启 JavaScript，然后重新打开 PhonePal。</noscript>
+</body>
+</html>

@@ -72,3 +72,15 @@ class ExternalToolsTest {
         assertTrue("未知工具 nope__tool" in h.chat.requests[1].messages.last().text)
     }
 }
+
+class NoPhoneTasksTest {
+    @Test
+    fun phoneTaskIsHiddenAndRefusedWhenDisabled() = kotlinx.coroutines.test.runTest {
+        val h = Harness(config = dev.phonepal.api.AgentConfig(phoneTasks = false))
+        h.chat.tools(ToolCall("c1", AgentTools.PHONE_TASK, "{\"goal\":\"打开设置\"}")).reply("好的")
+        h.agent.handle("打开设置", h.events, h.stop)
+        assertFalse(AgentTools.PHONE_TASK in h.chat.requests[0].tools.map { it.name })
+        assertTrue("不能操作手机" in h.chat.requests[1].messages.last().text)
+        assertEquals(0, h.device.performed.size)
+    }
+}

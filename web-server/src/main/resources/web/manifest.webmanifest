@@ -1,0 +1,12 @@
+{
+  "name": "PhonePal",
+  "short_name": "PhonePal",
+  "lang": "zh-CN",
+  "description": "你的随身 AI 助手",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#f5f7fb",
+  "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}]
+}

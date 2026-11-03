@@ -134,7 +134,7 @@ class McpToolProvider(
                 ConfirmPolicy.WRITES -> tool.readOnlyHint != true
             }
             if (confirm && !approvals.approve(ToolApprovalRequest(
-                    taskId, redactor.redact(server.name), redactor.redact(tool.name),
+                    taskId, redactor.redact(server.title), redactor.redact(tool.name),
                     tool.title?.let(redactor::redact), redactor.redact(arguments.toString()),
                     if (server.confirm == ConfirmPolicy.ALL) "该服务器的所有工具调用都需要确认" else "该工具会修改外部数据或产生费用",
                 ))) {

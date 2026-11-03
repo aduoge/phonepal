@@ -19,7 +19,7 @@ data class ToolResult(val ok: Boolean, val text: String, val summary: String)
 /** Confirmation before an external tool with side effects runs (booking a ride, placing an order ...). */
 data class ToolApprovalRequest(
     val taskId: String,
-    /** Server name from the configuration, e.g. `didi`. */
+    /** Display name of the server, e.g. `滴滴出行`. */
     val server: String,
     /** Tool name on that server, e.g. `create_order`. */
     val tool: String,

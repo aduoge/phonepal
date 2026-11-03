@@ -1,0 +1,63 @@
+{
+  "_comment": "One-tap MCP catalog shared by the Android app, the web version and ios-runner. ${NAME} placeholders are filled from keys[]. Probed with an MCP initialize request on 2026-11-03.",
+  "servers": [
+    {
+      "id": "amap", "title": "高德地图", "category": "出行", "official": true,
+      "description": "地点搜索、路线规划、天气、周边与大众点评信息，可生成打开高德 App 的导航链接",
+      "url": "https://mcp.amap.com/mcp?key=${AMAP_MAPS_API_KEY}", "confirm": "none",
+      "keys": [{"name": "AMAP_MAPS_API_KEY", "label": "高德 Web 服务 Key", "help": "https://lbs.amap.com/api/mcp-server/gettingstarted"}]
+    },
+    {
+      "id": "tencent-map", "title": "腾讯地图", "category": "出行", "official": true,
+      "description": "地点搜索、地址解析、路线规划、天气",
+      "url": "https://mcp.map.qq.com/mcp?key=${TENCENT_MAP_KEY}", "confirm": "none",
+      "keys": [{"name": "TENCENT_MAP_KEY", "label": "腾讯位置服务 Key", "help": "https://lbs.qq.com/"}]
+    },
+    {
+      "id": "didi", "title": "滴滴出行", "category": "出行", "official": true,
+      "description": "打车估价、叫车与取消、行程状态；叫车和取消前会先问你",
+      "url": "https://mcp.didichuxing.com/mcp-servers?key=${DIDI_MCP_KEY}", "confirm": "writes",
+      "keys": [{"name": "DIDI_MCP_KEY", "label": "滴滴 MCP Key", "help": "https://open.didichuxing.com/"}]
+    },
+    {
+      "id": "tuniu-hotel", "title": "途牛酒店", "category": "出行", "official": true,
+      "description": "酒店搜索与详情",
+      "url": "https://openapi.tuniu.cn/mcp/hotel", "headers": {"apiKey": "${TUNIU_API_KEY}"}, "confirm": "writes",
+      "keys": [{"name": "TUNIU_API_KEY", "label": "途牛开放平台 Key", "help": "https://open.tuniu.com/"}]
+    },
+    {
+      "id": "tuniu-flight", "title": "途牛机票", "category": "出行", "official": true,
+      "description": "航班搜索与价格",
+      "url": "https://openapi.tuniu.cn/mcp/flight", "headers": {"apiKey": "${TUNIU_API_KEY}"}, "confirm": "writes",
+      "keys": [{"name": "TUNIU_API_KEY", "label": "途牛开放平台 Key", "help": "https://open.tuniu.com/"}]
+    },
+    {
+      "id": "12306", "title": "火车票查询", "category": "出行", "official": false,
+      "description": "查询余票、车次与经停站（社区项目 12306-mcp，需要电脑上的 Node.js）",
+      "command": "npx", "args": ["-y", "12306-mcp"], "confirm": "none", "platforms": ["desktop"]
+    },
+    {
+      "id": "mcdonalds", "title": "麦当劳", "category": "生活", "official": true,
+      "description": "附近门店、菜单与营养信息",
+      "url": "https://mcp.mcd.cn", "headers": {"Authorization": "Bearer ${MCD_MCP_TOKEN}"}, "confirm": "writes",
+      "keys": [{"name": "MCD_MCP_TOKEN", "label": "麦当劳 MCP Token", "help": "https://mcp.mcd.cn"}]
+    },
+    {
+      "id": "dida365", "title": "滴答清单", "category": "效率", "official": true,
+      "description": "查看与新建任务、习惯和专注记录；新建和修改前会先问你",
+      "url": "https://mcp.dida365.com", "headers": {"Authorization": "Bearer ${DIDA_API_TOKEN}"}, "confirm": "writes",
+      "keys": [{"name": "DIDA_API_TOKEN", "label": "滴答清单 API Token", "help": "https://dida365.com/"}]
+    },
+    {
+      "id": "metaso", "title": "秘塔搜索", "category": "资讯", "official": true,
+      "description": "联网搜索与网页阅读",
+      "url": "https://metaso.cn/api/mcp", "headers": {"Authorization": "Bearer ${METASO_API_KEY}"}, "confirm": "none",
+      "keys": [{"name": "METASO_API_KEY", "label": "秘塔 API Key", "help": "https://metaso.cn/"}]
+    },
+    {
+      "id": "aihot", "title": "AI 热点资讯", "category": "资讯", "official": false,
+      "description": "每日、每周 AI 资讯与热点事件，无需 Key",
+      "url": "https://aihot.news/api/mcp", "confirm": "none"
+    }
+  ]
+}

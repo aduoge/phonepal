@@ -41,15 +41,15 @@ ios-runner chat
 
 `tools`、`call` 不需要配置模型。`ask` 和 `chat` 要先按 [ios.md](ios.md) 配好模型。`12306` 这类 stdio 服务器要求 Mac 上装有 Node.js。
 
+## 一键勾选
+
+内置目录在 `core-mcp/src/main/resources/dev/phonepal/mcp/catalog.json`，安卓 App 的「服务」页和网页版的「服务」页都读这份目录：打开开关、填 Key、点「测试连接」即可，也可以添加任意 https 的 MCP 服务。只能在电脑上运行的服务（如 12306）不会出现在手机和网页上。
+
 ## 在安卓 App 上用
 
-App 在启动时读取 `/sdcard/Android/data/dev.phonepal.app/files/mcp.json`。安卓上没有环境变量，Key 直接写在这个文件里；这个目录只有 App 自己和 adb 能读取。手机上只支持远程 HTTP 服务器，stdio 服务器会被跳过。
+在底部的「服务」页勾选，Key 保存在加密存储里，保存后下一条消息生效。需要确认的工具会在聊天里提问，回复“确认”才会执行，回复其他内容就取消。
 
-```bash
-adb push mcp.json /sdcard/Android/data/dev.phonepal.app/files/mcp.json
-```
-
-改完配置需要重启 App。需要确认的工具会在聊天里提问，回复“确认”才会执行，回复其他内容就取消。
+进阶：也可以用 adb 把 `mcp.json` 放到 `/sdcard/Android/data/dev.phonepal.app/files/mcp.json`，其中的远程 HTTP 服务器会与勾选的服务合并（Key 直接写在文件里，stdio 服务器会被跳过）。
 
 ## 实现位置
 
