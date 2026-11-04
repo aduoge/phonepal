@@ -57,7 +57,7 @@ scripts/gradle.sh test :app:assembleDebug            # 之后可以离线构建
 
 ## 课堂实践
 
-[用 TRAE 给小满加能力](docs/classroom.md)：围绕美团点餐与12306选票，用 TRAE 修改技能、推送验证，再体验行程提醒。
+[学生动手手册](docs/classroom.md)：TRAE 训练营第二期“用 TRAE 搭建你的个人 Agent 助手”的配套手册。第一节装好小满并跑通淘宝任务，第二节蒸馏你自己，再用 TRAE 改外卖技能、车票技能和首页入口。
 
 ## 技能与开发者 CLI
 
