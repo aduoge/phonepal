@@ -1,5 +1,6 @@
 package dev.phonepal.app
 
+import android.content.Intent
 import dev.phonepal.app.session.AgentSession
 import dev.phonepal.hands.AccessibilityDevice
 import dev.phonepal.hands.PhonePalAccessibilityService
@@ -8,6 +9,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
@@ -19,12 +21,13 @@ class OverlayController(
     private val session: AgentSession,
     private val device: AccessibilityDevice,
     private val services: StateFlow<PhonePalAccessibilityService?> = PhonePalAccessibilityService.instance,
+    private val uiVisible: StateFlow<Boolean> = MutableStateFlow(false),
 ) {
     private var overlay: StatusOverlay? = null
     private var owner: PhonePalAccessibilityService? = null
 
     fun start(scope: CoroutineScope): Job = scope.launch(Dispatchers.Main.immediate) {
-        combine(services, session.busy, session.status) { service, busy, status -> Triple(service, busy, status) }
+        combine(services, session.busy, session.status, uiVisible) { service, busy, status, visible -> Triple(service, busy && !visible, status) }
             .collect { (service, busy, status) ->
                 if (!busy || service == null) {
                     remove()
@@ -34,6 +37,8 @@ class OverlayController(
                     remove()
                     overlay = StatusOverlay(service).also {
                         it.onStop = { session.stop() }
+                        it.onOpen = { service.startActivity(Intent(service, MainActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
                         device.overlay = it
                         it.show()
                     }

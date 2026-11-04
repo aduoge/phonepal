@@ -25,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 import java.io.IOException
 
@@ -59,6 +60,7 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     val reminderScheduler by lazy { AlarmReminderScheduler(app) }
 
     val runIds = RunIds()
+    val uiVisible = MutableStateFlow(false)
 
     val traces by lazy {
         TraceWriter(
@@ -126,7 +128,7 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     fun start() {
         startup = scope.async(Dispatchers.IO) { prepareSkills() }
         notifier.createChannels()
-        OverlayController(session, accessibilityDevice).start(scope)
+        OverlayController(session, accessibilityDevice, uiVisible = uiVisible).start(scope)
         scope.launch(Dispatchers.Main.immediate) {
             session.busy.collect { busy -> if (busy) AgentService.start(app) }
         }

@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -16,6 +18,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +27,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import dev.phonepal.app.AppGraph
 import dev.phonepal.app.R
 
@@ -37,15 +42,16 @@ enum class Tab(@StringRes val label: Int, val icon: ImageVector) {
 @Composable
 fun PhonePalRoot(graph: AppGraph) {
     var tab by rememberSaveable { mutableStateOf(Tab.CHAT) }
+    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            if (!keyboardOpen) NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
                 Tab.entries.forEach { t ->
                     NavigationBarItem(
                         selected = tab == t,
                         onClick = { tab = t },
                         icon = { Icon(t.icon, contentDescription = null) },
-                        label = { Text(stringResource(t.label)) },
+                        label = { Text(stringResource(t.label), style = MaterialTheme.typography.labelSmall) },
                     )
                 }
             }

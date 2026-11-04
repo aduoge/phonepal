@@ -32,6 +32,7 @@ class StatusOverlay(private val context: Context) {
 
     /** Invoked on the main thread when the user taps Stop. */
     var onStop: () -> Unit = {}
+    var onOpen: () -> Unit = {}
 
     private val main = Handler(Looper.getMainLooper())
     private val windowManager = context.getSystemService(WindowManager::class.java)
@@ -107,11 +108,15 @@ class StatusOverlay(private val context: Context) {
         val pad = dp(10)
         val label = TextView(context).apply {
             setTextColor(0xFFFFFFFF.toInt())
-            setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             maxLines = 2
             ellipsize = TextUtils.TruncateAt.END
-            maxWidth = (context.resources.displayMetrics.widthPixels * 0.65f).toInt()
+            maxWidth = (context.resources.displayMetrics.widthPixels * 0.52f).toInt()
             text = pendingText
+            minHeight = dp(48)
+            gravity = Gravity.CENTER_VERTICAL
+            contentDescription = "查看 PhonePal 任务"
+            setOnClickListener { onOpen() }
             // Read status changes to TalkBack users.
             accessibilityLiveRegion = View.ACCESSIBILITY_LIVE_REGION_POLITE
         }
@@ -120,6 +125,7 @@ class StatusOverlay(private val context: Context) {
             contentDescription = context.getString(R.string.phonepal_overlay_stop_description)
             minimumHeight = dp(48)
             minHeight = dp(48)
+            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
             setOnClickListener { onStop() }
         }
         textView = label
@@ -129,7 +135,7 @@ class StatusOverlay(private val context: Context) {
             setPadding(pad * 2, pad / 2, pad / 2, pad / 2)
             background = GradientDrawable().apply {
                 cornerRadius = dp(24).toFloat()
-                setColor(0xE0202124.toInt())
+                setColor(0xF01E4635.toInt())
             }
             addView(label, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { marginEnd = pad })
             addView(stop, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT))
