@@ -1,12 +1,12 @@
-# PhonePal
+# 小满（Xiaoman）
 
 [English](README.en.md)
 
-PhonePal 是一个跑在 Android 手机上的开源私人助手。你在它的 App 里聊天，它会记住你告诉它的事，
+小满是一个跑在 Android 手机上的开源私人助手。你在它的 App 里聊天，它会记住你告诉它的事，
 也能替你操作手机上的其他 App，比如打车、点外卖、改系统设置。新场景以**技能**的形式添加：一个技能
 就是一个包含 `SKILL.md` 和可选 `flow.yaml` 的小文件夹，推到手机上即可生效，不需要重新打包 APK。
 
-- 需要 Android 11（API 30）及以上。PhonePal 通过无障碍服务读取屏幕并执行操作。
+- 需要 Android 11（API 30）及以上。小满通过无障碍服务读取屏幕并执行操作。
 - 不支持 iOS：iOS 不允许一个 App 读取或操作其他 App。
 - 模型：任意兼容 OpenAI 接口的服务都可以，例如火山方舟、阿里云百炼、OpenRouter、vLLM、Ollama。
   需要配置两个模型：一个聊天模型，一个能看图的屏幕操作模型。
@@ -48,16 +48,16 @@ scripts/gradle.sh test :app:assembleDebug            # 之后可以离线构建
 
 ## 使用
 
-1. 安装 debug APK，打开 PhonePal。
+1. 安装 debug APK，打开小满。
 2. 在「设置」里分别填写聊天模型和操作模型的 Base URL、模型名称和 API Key。
-3. 按提示开启 PhonePal 无障碍服务。
+3. 按提示开启小满无障碍服务。
 4. 回到「聊天」，试试：「帮我打车回家」「记住我家在……」「把 Wi-Fi 打开」。
 
 以火山方舟为例，Base URL 填 `https://ark.cn-beijing.volces.com/api/v3`（也是默认值），模型填方舟上的模型或接入点 ID。
 
 ## 课堂实践
 
-[用 TRAE 给 PhonePal 加能力](docs/classroom.md)：围绕美团点餐与12306选票，用 TRAE 修改技能、推送验证，再体验行程提醒。
+[用 TRAE 给小满加能力](docs/classroom.md)：围绕美团点餐与12306选票，用 TRAE 修改技能、推送验证，再体验行程提醒。
 
 ## 技能与开发者 CLI
 
@@ -65,16 +65,16 @@ scripts/gradle.sh test :app:assembleDebug            # 之后可以离线构建
 - [cli/](cli/README.md)（Python 3，仅依赖标准库）可以校验技能、通过 adb 推送到手机、在 debug 包上直接跑任务并查看轨迹：
 
 ```bash
-python3 cli/phonepal.py lint skills/examples/*
-python3 cli/phonepal.py push skills/examples/taxi-home
-python3 cli/phonepal.py run "打开设置里的 Wi-Fi 页面" --skill open-settings-wifi --follow
-python3 cli/phonepal.py traces show <run_id>
+python3 cli/xiaoman.py lint skills/examples/*
+python3 cli/xiaoman.py push skills/examples/taxi-home
+python3 cli/xiaoman.py run "打开设置里的 Wi-Fi 页面" --skill open-settings-wifi --follow
+python3 cli/xiaoman.py traces show <run_id>
 ```
 
 ## 目录结构
 
 ```
-phonepal/
+xiaoman/
 ├── core-api/        # 接口与数据结构，其他模块只依赖它
 ├── core-llm/        # 兼容 OpenAI 的模型客户端
 ├── core-memory/     # 记忆：Basic Memory 格式的 Markdown 笔记 + 中文检索
@@ -95,7 +95,7 @@ phonepal/
 ## 记忆
 
 记忆是 Basic Memory 格式的 Markdown 文件，存放在
-`/sdcard/Android/data/dev.phonepal.app/files/memory/`，可以直接拷进 Obsidian 查看和编辑。
+`/sdcard/Android/data/dev.xiaoman.app/files/memory/`，可以直接拷进 Obsidian 查看和编辑。
 「忘记」会直接删除对应文件。
 
 ## 许可证

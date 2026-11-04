@@ -7,7 +7,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 
-from phonepal_cli.lint import lint_flow, lint_skill  # noqa: E402
+from xiaoman_cli.lint import lint_flow, lint_skill  # noqa: E402
 
 FIXTURE = os.path.join(HERE, "fixtures", "skills", "ride-home")
 
@@ -24,7 +24,7 @@ Body.
 
 class LintTestCase(unittest.TestCase):
     def setUp(self):
-        self.tmp = tempfile.mkdtemp(prefix="phonepal-lint-")
+        self.tmp = tempfile.mkdtemp(prefix="xiaoman-lint-")
 
     def tearDown(self):
         shutil.rmtree(self.tmp)

@@ -8,7 +8,7 @@ plugins {
 }
 
 // Optional out-of-tree build output, used by scripts/gradle.sh so a checkout stays clean.
-System.getenv("PHONEPAL_BUILD_DIR")?.let { root ->
+System.getenv("XIAOMAN_BUILD_DIR")?.let { root ->
     allprojects {
         layout.buildDirectory.set(file("$root/${if (path == ":") "root" else path.removePrefix(":").replace(':', '/')}"))
     }

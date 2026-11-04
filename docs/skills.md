@@ -1,6 +1,6 @@
 # 编写技能
 
-一个技能教会 PhonePal 一个场景（打车、外卖、某个设置页……）。技能是一个文件夹，包含 `SKILL.md`
+一个技能教会小满一个场景（打车、外卖、某个设置页……）。技能是一个文件夹，包含 `SKILL.md`
 和可选的 `flow.yaml`，不需要重新打包 APK。示例见 `skills/examples/`。
 
 ```
@@ -11,9 +11,9 @@ taxi-home/
 
 ## 技能放在哪里
 
-手机上：`/sdcard/Android/data/dev.phonepal.app/files/skills/<name>/`。App 也会把示例技能作为 assets
+手机上：`/sdcard/Android/data/dev.xiaoman.app/files/skills/<name>/`。App 也会把示例技能作为 assets
 打包；手机目录里同 `name` 的技能会覆盖内置技能。App 启动时会重新加载技能，debug 包也可以通过
-`dev.phonepal.debug.RELOAD_SKILLS` 广播触发重新加载。
+`dev.xiaoman.debug.RELOAD_SKILLS` 广播触发重新加载。
 
 ## SKILL.md
 
@@ -26,7 +26,7 @@ channel: deeplink-then-gui
 confirm_before: [确认呼叫]
 memory: [places/家]
 deeplinks:
-  route: "amapuri://route/plan/?sourceApplication=phonepal&dname={destination}&dev=0&t=0"
+  route: "amapuri://route/plan/?sourceApplication=xiaoman&dname={destination}&dev=0&t=0"
 ---
 # 高德打车回家
 
@@ -71,7 +71,7 @@ steps:
 唯一的例外是 `name` 与文件夹名不一致：会报告问题，但技能仍以 `name` 加载。未知字段也算问题，
 这样 `confirm-before` 之类的拼写错误不会悄悄丢掉安全确认词。用户技能加载失败时，同名的内置技能保持生效。
 
-在电脑上可以先用 CLI 校验：`python3 cli/phonepal.py lint <技能目录>`。
+在电脑上可以先用 CLI 校验：`python3 cli/xiaoman.py lint <技能目录>`。
 
 ## 安全
 

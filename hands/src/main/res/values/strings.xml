@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="phonepal_accessibility_label">PhonePal</string>
-    <string name="phonepal_accessibility_summary">Lets PhonePal operate other apps for you</string>
-    <string name="phonepal_accessibility_description">PhonePal uses this service to read the screen, take screenshots and tap, swipe and type in other apps when you ask it to do a task. The screen content is sent only to the AI model you configured. Payments, sending messages and other sensitive steps always ask for your confirmation, and you can stop a task at any time with the Stop button.</string>
-    <string name="phonepal_overlay_stop">Stop</string>
-    <string name="phonepal_overlay_stop_description">Stop the current PhonePal task</string>
+    <string name="xiaoman_accessibility_label">小满</string>
+    <string name="xiaoman_accessibility_summary">Lets Xiaoman operate other apps for you</string>
+    <string name="xiaoman_accessibility_description">Xiaoman uses this service to read the screen, take screenshots and tap, swipe and type in other apps when you ask it to do a task. The screen content is sent only to the AI model you configured. Payments, sending messages and other sensitive steps always ask for your confirmation, and you can stop a task at any time with the Stop button.</string>
+    <string name="xiaoman_overlay_stop">Stop</string>
+    <string name="xiaoman_overlay_stop_description">Stop the current Xiaoman task</string>
 </resources>

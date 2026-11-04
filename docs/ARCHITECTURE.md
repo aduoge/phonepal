@@ -1,6 +1,6 @@
-# PhonePal 架构
+# 小满架构
 
-PhonePal 是一个跑在 Android 手机上的开源私人助手：你在它的 App 里聊天，它替你操作手机上的其他
+小满是一个跑在 Android 手机上的开源私人助手：你在它的 App 里聊天，它替你操作手机上的其他
 App。框架负责“手”（无障碍操作）、“眼”（读屏）、记忆、安全闸门和模型调用；具体场景（打车、外卖、
 购票……）由用户以**场景技能**的形式添加。技能是 Markdown/YAML 小文件夹，不需要重新打包 APK。
 
@@ -15,8 +15,8 @@ App。框架负责“手”（无障碍操作）、“眼”（读屏）、记�
 | `core-memory` | Kotlin/JVM | `FileMemoryStore`：磁盘上的 Basic Memory Markdown 笔记，加上支持中文的检索索引 |
 | `core-skills` | Kotlin/JVM | `DirectorySkillRepository`：加载并校验 `SKILL.md` 和 `flow.yaml` |
 | `core-sentinel` | Kotlin/JVM | `PolicySentinel`：允许 / 询问 / 拒绝，任务级授权，审计 |
-| `core-agent` | Kotlin/JVM | `PhonePalAgent`：聊天编排、操作循环、技能流程、经验笔记 |
-| `hands` | Android 库 | `PhonePalAccessibilityService`、`AccessibilityDevice`、状态悬浮窗 |
+| `core-agent` | Kotlin/JVM | `XiaomanAgent`：聊天编排、操作循环、技能流程、经验笔记 |
+| `hands` | Android 库 | `XiaomanAccessibilityService`、`AccessibilityDevice`、状态悬浮窗 |
 | `app` | Android 应用 | 聊天界面、设置、技能与记忆页面、授权确认、调试桥、轨迹 |
 | `cli/` | Python 3（仅标准库） | 面向技能作者的开发工具：通过 adb 做校验、推送、运行、日志、轨迹 |
 
@@ -27,13 +27,13 @@ app ──► core-agent / core-llm / core-memory / core-skills / core-sentinel 
  └────► hands ─────────────────────────────────────────────────────────────► core-api
 ```
 
-`app/AppGraph.kt` 是手写的依赖容器，把各模块的实现组装成 `PhonePalAgent`。
+`app/AppGraph.kt` 是手写的依赖容器，把各模块的实现组装成 `XiaomanAgent`。
 
 ### core-agent 内部文件
 
 | 文件 | 内容 |
 |---|---|
-| `PhonePalAgent.kt` | `Agent` 实现：一轮聊天（`handle`）、一次手机任务（`runPhoneTask`）、成功后的经验沉淀 |
+| `XiaomanAgent.kt` | `Agent` 实现：一轮聊天（`handle`）、一次手机任务（`runPhoneTask`）、成功后的经验沉淀 |
 | `AgentTools.kt` | 提供给聊天模型的工具定义（名称与 JSON Schema） |
 | `ChatTools.kt` | 执行聊天模型发起的工具调用 |
 | `TaskRun.kt` | 一次手机任务的运行状态，以及操作循环与流程共用的结果类型 |
@@ -48,7 +48,7 @@ app ──► core-agent / core-llm / core-memory / core-skills / core-sentinel 
 ## 一轮聊天
 
 ```
-用户输入 ──► PhonePalAgent.handle
+用户输入 ──► XiaomanAgent.handle
                │  系统提示词 = 人设 + 技能索引（name: description）+ 记忆检索命中
                ▼
            聊天模型（角色 CHAT），可用工具：
@@ -91,25 +91,25 @@ Agent 会按目标检索 `howto` 笔记，把命中结果放进操作提示词�
 ## 技能
 
 技能是一个文件夹：`SKILL.md`（frontmatter + Markdown 说明）和可选的 `flow.yaml`。格式定义见
-`core-api/src/main/kotlin/dev/phonepal/api/Skills.kt` 和 [`docs/skills.md`](skills.md)，示例在
+`core-api/src/main/kotlin/dev/xiaoman/api/Skills.kt` 和 [`docs/skills.md`](skills.md)，示例在
 `skills/examples/`。
 
 手机上的技能目录：`<external files>/skills/<name>/`，其中 `<external files>` 为
-`/sdcard/Android/data/dev.phonepal.app/files`。App 也会把示例技能作为 assets 一起打包。
+`/sdcard/Android/data/dev.xiaoman.app/files`。App 也会把示例技能作为 assets 一起打包。
 
 ## 记忆
 
 笔记是 `<external files>/memory/` 下的 Markdown 文件，采用 Basic Memory 格式：frontmatter 包含
 `title/type/permalink/tags`；`## Observations` 下每行为 `- [category] content #tag (context)`；
 `## Relations` 下每行为 `- relation [[Target]]`。整个目录可以直接拷进 Obsidian 仓库。「忘记」会删除文件。
-PhonePal 自行实现这一格式，没有内嵌 Basic Memory（AGPL-3.0）的代码。
+小满自行实现这一格式，没有内嵌 Basic Memory（AGPL-3.0）的代码。
 
 ## 安全（Sentinel）
 
 每个操作都在模型之外评估：
 
 1. `deny`（拒绝）：向密码框输入；在受保护（FLAG_SECURE）页面上操作；技能声明了 `apps` 时操作清单之外的
-   包（桌面启动器和 PhonePal 自身除外）。
+   包（桌面启动器和小满自身除外）。
 2. `ask`（询问）：`tap` / `long_press` / `type` 的目标文字或被操作节点的文字包含确认词。确认词包括内置列表
    （支付、付款、确认支付、立即支付、转账、发送、删除、下单、提交订单、确认呼叫、呼叫、购买、
    pay、send、delete、purchase、order）以及技能的 `confirm_before`。在技能内，`deeplink` 与技能的
@@ -120,17 +120,17 @@ PhonePal 自行实现这一格式，没有内嵌 Basic Memory（AGPL-3.0）的�
 
 ## 调试桥（仅 debug 包）
 
-App 注册了 `dev.phonepal.app.debug.DebugReceiver`（只在 debug 清单中导出）：
+App 注册了 `dev.xiaoman.app.debug.DebugReceiver`（只在 debug 清单中导出）：
 
 | 广播 action | 参数 | 作用 |
 |---|---|---|
-| `dev.phonepal.debug.RUN` | `goal`（字符串）、`skill`（可选）、`run_id`（可选） | 在前台服务中执行 `Agent.runPhoneTask` |
-| `dev.phonepal.debug.STOP` | 无 | 给正在运行的任务发送停止信号 |
-| `dev.phonepal.debug.RELOAD_SKILLS` | 无 | 调用 `SkillRepository.reload()` 并记录加载问题 |
+| `dev.xiaoman.debug.RUN` | `goal`（字符串）、`skill`（可选）、`run_id`（可选） | 在前台服务中执行 `Agent.runPhoneTask` |
+| `dev.xiaoman.debug.STOP` | 无 | 给正在运行的任务发送停止信号 |
+| `dev.xiaoman.debug.RELOAD_SKILLS` | 无 | 调用 `SkillRepository.reload()` 并记录加载问题 |
 
-示例：`adb shell am broadcast -n dev.phonepal.app/.debug.DebugReceiver -a dev.phonepal.debug.RUN --es goal "打开设置" --es run_id r1`
+示例：`adb shell am broadcast -n dev.xiaoman.app/.debug.DebugReceiver -a dev.xiaoman.debug.RUN --es goal "打开设置" --es run_id r1`
 
-日志：logcat 标签 `PhonePal`，每个事件一行：`PhonePal: <run_id> <EventKind> <json>`。
+日志：logcat 标签 `小满`，每个事件一行：`小满: <run_id> <EventKind> <json>`。
 
 轨迹：`<external files>/traces/<run_id>/trace.jsonl`，每行一个 JSON 对象：
 

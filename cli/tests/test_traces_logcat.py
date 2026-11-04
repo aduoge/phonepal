@@ -6,8 +6,8 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 
-from phonepal_cli.logcat import format_event, parse_line  # noqa: E402
-from phonepal_cli.traces import (  # noqa: E402
+from xiaoman_cli.logcat import format_event, parse_line  # noqa: E402
+from xiaoman_cli.traces import (  # noqa: E402
     display_width, load_trace, render_table, resolve_trace, summarize_action, trace_footer, truncate,
 )
 
@@ -78,7 +78,7 @@ class TraceTest(unittest.TestCase):
 
 class LogcatTest(unittest.TestCase):
     def test_threadtime(self):
-        ev = parse_line('10-31 12:00:01.234  1234  1250 I PhonePal: r1 StepPlanned '
+        ev = parse_line('10-31 12:00:01.234  1234  1250 I Xiaoman: r1 StepPlanned '
                         '{"step": 3, "action": {"type": "tap", "nodeId": 12}}\n')
         self.assertEqual((ev.run_id, ev.kind, ev.time), ("r1", "StepPlanned", "12:00:01.234"))
         self.assertEqual(ev.data["step"], 3)
@@ -86,7 +86,7 @@ class LogcatTest(unittest.TestCase):
         self.assertEqual(format_event(ev), "12:00:01.234 r1 StepPlanned  #3 tap #12")
 
     def test_brief_and_raw(self):
-        ev = parse_line("I/PhonePal( 1234): r2 Failed {\"message\": \"boom\"}")
+        ev = parse_line("I/Xiaoman( 1234): r2 Failed {\"message\": \"boom\"}")
         self.assertEqual((ev.run_id, ev.kind), ("r2", "Failed"))
         self.assertTrue(ev.terminal)
         self.assertFalse(ev.success)
@@ -97,16 +97,16 @@ class LogcatTest(unittest.TestCase):
         self.assertIn("ok=yes | 完成", format_event(ev))
 
     def test_agent_event_style_fields(self):
-        ev = parse_line('I PhonePal: r1 StepExecuted {"stepIndex": 2, "action": {"type": "back"}, '
+        ev = parse_line('I Xiaoman: r1 StepExecuted {"stepIndex": 2, "action": {"type": "back"}, '
                         '"result": {"ok": false, "message": "no window"}}')
         self.assertEqual(format_event(ev), "r1 StepExecuted  #2 back ok=no | no window")
 
     def test_truncated_json_and_noise(self):
-        ev = parse_line('I PhonePal: r1 Reply {"text": "cut')
+        ev = parse_line('I Xiaoman: r1 Reply {"text": "cut')
         self.assertIsNone(ev.data)
         self.assertEqual(format_event(ev), 'r1 Reply  {"text": "cut')
         self.assertIsNone(parse_line("--------- beginning of main"))
-        self.assertIsNone(parse_line("I PhonePal: skills reloaded, 0 problems"))
+        self.assertIsNone(parse_line("I Xiaoman: skills reloaded, 0 problems"))
         self.assertIsNone(parse_line(""))
 
 

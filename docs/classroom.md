@@ -1,12 +1,12 @@
-# 用 TRAE 给 PhonePal 加能力：学生动手手册
+# 用 TRAE 给小满加能力：学生动手手册
 
 这两节课围绕两个生活任务：点一份符合预算的外卖、按行程选购一张火车票。你会让 TRAE 修改技能，再在真实 App 中分阶段验证。最后交技能文件和能看清实际完成阶段的录屏。
 
 ## 课前把这几样准备好
 
-电脑安装 TRAE IDE、Python 3.8+ 和 Android platform-tools。手机需要 Android 11 及以上，安装讲师提供的 PhonePal debug APK。iPhone 不能完成同样的跨 App 操作，可与有安卓手机的同学结对。
+电脑安装 TRAE IDE、Python 3.8+ 和 Android platform-tools。手机需要 Android 11 及以上，安装讲师提供的小满 debug APK。iPhone 不能完成同样的跨 App 操作，可与有安卓手机的同学结对。
 
-在 PhonePal「设置」里填写自己的聊天模型和操作模型：Base URL、模型名或接入点 ID、API Key。操作模型需要支持图片。方舟示例地址是 `https://ark.cn-beijing.volces.com/api/v3`；2026-11-02 的讲师实验使用 `doubao-seed-2-1-pro-260915`，自己的账号也要开通相应模型。Key 只填在 App 中，不发到群里或写进技能文件。
+在小满「设置」里填写自己的聊天模型和操作模型：Base URL、模型名或接入点 ID、API Key。操作模型需要支持图片。方舟示例地址是 `https://ark.cn-beijing.volces.com/api/v3`；2026-11-02 的讲师实验使用 `doubao-seed-2-1-pro-260915`，自己的账号也要开通相应模型。Key 只填在 App 中，不发到群里或写进技能文件。
 
 课前先发一句简单聊天，再跑一项只读手机任务，分别验证聊天模型和操作模型。若提示 `429；SetLimitExceeded`，应到方舟检查模型推理限额、“安心体验”和账户余额。2026-11-02 讲师账号因免费额度限制暂停；只充值或反复重试不一定能恢复，还需检查限制设置。普通短时限流与账号额度限制不同，先看具体错误码。
 
@@ -17,15 +17,15 @@ python --version
 adb devices -l
 ```
 
-macOS 若没有 `python`，下面所有命令改用 `python3`。设备状态要显示 `device`；显示 `unauthorized` 时在手机上确认调试授权，显示 `offline` 时重新连接。多台设备连接时，给 PhonePal 命令加 `--serial 你的设备序列号`。
+macOS 若没有 `python`，下面所有命令改用 `python3`。设备状态要显示 `device`；显示 `unauthorized` 时在手机上确认调试授权，显示 `offline` 时重新连接。多台设备连接时，给小满命令加 `--serial 你的设备序列号`。
 
-把课程源码解压，使用 TRAE 打开包含 README.md、cli、skills 的 PhonePal 文件夹。终端也要位于这个文件夹。远程 Home Mac 中转只是讲师环境，学生使用 USB 即可。
+把课程源码解压，使用 TRAE 打开包含 README.md、cli、skills 的小满文件夹。终端也要位于这个文件夹。远程 Home Mac 中转只是讲师环境，学生使用 USB 即可。
 
 ## 第一节：开发自己的外卖助手
 
-先确认手机已登录美团，能手动进入“外卖”并看到配送区域。vivo 首次允许 PhonePal 打开美团时，会出现系统授权页；按手机提示完成，再回到 PhonePal 回复“继续”。
+先确认手机已登录美团，能手动进入“外卖”并看到配送区域。vivo 首次允许小满打开美团时，会出现系统授权页；按手机提示完成，再回到小满回复“继续”。
 
-在 PhonePal 聊天中说：
+在小满聊天中说：
 
 > 我一个人吃，30 元以内，想吃鸡肉饭，不辣。按当前配送区域先找两家，告诉我页面上的价格条件和预计送达时间，暂不加购。
 
@@ -38,17 +38,17 @@ macOS 若没有 `python`，下面所有命令改用 `python3`。设备状态要�
 在 TRAE 终端执行：
 
 ```text
-python cli/phonepal.py lint skills/examples/meituan-takeout-order
-python cli/phonepal.py push skills/examples/meituan-takeout-order
+python cli/xiaoman.py lint skills/examples/meituan-takeout-order
+python cli/xiaoman.py push skills/examples/meituan-takeout-order
 ```
 
 先在 TRAE 查看文件差异，确认新增规则确实写入。若你选的需求原先已经实现，就换一条尚未覆盖的个性化要求。看到 `0 problem(s)` 和 `skills reloaded` 后，再执行刚才的查询，检查修改是否生效。选择方案后可以继续：
 
 > 选第二家，按刚才的菜品和规格准备订单。总价要包含包装和配送，先让我看最终应付，再决定是否提交。
 
-手机上核对店铺、菜品规格、份数、地址、费用明细和最终金额。确认要购买时，由你决定是否提交并亲自完成支付；之后让 PhonePal 读取订单编号和状态。准备到结算页只代表订单待确认，不能写成“已买到”。没有实际用餐需求的同学完成到确认页即可。
+手机上核对店铺、菜品规格、份数、地址、费用明细和最终金额。确认要购买时，由你决定是否提交并亲自完成支付；之后让小满读取订单编号和状态。准备到结算页只代表订单待确认，不能写成“已买到”。没有实际用餐需求的同学完成到确认页即可。
 
-想增加个性，可以让 PhonePal 记住“不辣、单人用餐预算 30 元”，再用“今天帮朋友点两份”测试当次要求能否覆盖默认偏好。不要把地址和手机号放进公共作业材料。
+想增加个性，可以让小满记住“不辣、单人用餐预算 30 元”，再用“今天帮朋友点两份”测试当次要求能否覆盖默认偏好。不要把地址和手机号放进公共作业材料。
 
 ## 第二节：给助手增加买车票能力
 
@@ -61,11 +61,11 @@ python cli/phonepal.py push skills/examples/meituan-takeout-order
 推送技能：
 
 ```text
-python cli/phonepal.py lint skills/examples/train-ticket-order
-python cli/phonepal.py push skills/examples/train-ticket-order
+python cli/xiaoman.py lint skills/examples/train-ticket-order
+python cli/xiaoman.py push skills/examples/train-ticket-order
 ```
 
-在 PhonePal 中尝试：
+在小满中尝试：
 
 > 下周五从上海去杭州，一位成人，18 点后出发，二等座，预算 150 元。先确认具体日期和起止站，再给我三个候选，只查询不预订。
 
@@ -84,14 +84,14 @@ python cli/phonepal.py push skills/examples/train-ticket-order
 需要单独查看操作层，可在终端执行下面的查询示例：
 
 ```text
-python cli/phonepal.py run "在美团外卖搜索鸡肉饭，比较两家候选，不加购、不下单" --skill meituan-takeout-order --follow
-python cli/phonepal.py traces show 本次运行ID
+python cli/xiaoman.py run "在美团外卖搜索鸡肉饭，比较两家候选，不加购、不下单" --skill meituan-takeout-order --follow
+python cli/xiaoman.py traces show 本次运行ID
 ```
 
 聊天发起会同时检验是否选对技能，CLI 的 `run` 只验证操作层。每次默认生成新的运行 ID 即可。要停止时点手机悬浮条“停止”，或执行：
 
 ```text
-python cli/phonepal.py stop
+python cli/xiaoman.py stop
 ```
 
 把问题交给 TRAE：
@@ -104,7 +104,7 @@ SKILL.md 是操作说明，推送后即可更新；新增程序能力需要构�
 
 ## 课堂代码演示：修复点不到搜索框的问题
 
-美团实测中，PhonePal 在截图时隐藏悬浮停止条，但执行坐标点击时又把它显示出来。模型看到的搜索框，实际可能被停止按钮挡住，任务因此中断。讲师用这个例子演示如何让 TRAE 修改项目代码。
+美团实测中，小满在截图时隐藏悬浮停止条，但执行坐标点击时又把它显示出来。模型看到的搜索框，实际可能被停止按钮挡住，任务因此中断。讲师用这个例子演示如何让 TRAE 修改项目代码。
 
 > 这次任务在点顶部搜索框时结束了，日志显示“用户已停止任务”，但我没有手动停止。请对照截图、坐标点击和悬浮条的实现定位原因。先写能复现问题的回归测试，再做最小修复。要求执行手势时不被悬浮条遮挡，手势完成或取消后停止按钮恢复。测试通过后构建 APK，并告诉我如何重新安装和复测。
 
@@ -112,7 +112,7 @@ SKILL.md 是操作说明，推送后即可更新；新增程序能力需要构�
 
 ## 看 TRAE 增加一个程序功能
 
-讲师演示的例子是 reminder_set：在聊天里说“2 分钟后提醒我喝水”，App 安排系统通知。它使用 PhonePal 自己的通知，不需要进入系统时钟。
+讲师演示的例子是 reminder_set：在聊天里说“2 分钟后提醒我喝水”，App 安排系统通知。它使用小满自己的通知，不需要进入系统时钟。
 
 TRAE 的开发需求可以这样写：
 
@@ -126,9 +126,9 @@ scripts/gradle.sh --online test :app:assembleDebug
 
 Windows 需要可执行该 shell 脚本的环境；本轮没有完成 Windows 构建实测。普通学员使用课程 APK 即可。讲师本轮使用的是 TRAE CLI；TRAE IDE 的课堂演示另行预演。
 
-安装包含提醒功能的课程 APK 后，允许通知，在聊天里安排一条带自己测试标记的提醒。若需要后台提醒，先完成机型对应的后台权限设置。在本轮 vivo 上，路径是系统设置的“后台耗电管理”→“PhonePal”→“允许后台高耗电”。其他品牌名称可能不同。
+安装包含提醒功能的课程 APK 后，允许通知，在聊天里安排一条带自己测试标记的提醒。若需要后台提醒，先完成机型对应的后台权限设置。在本轮 vivo 上，路径是系统设置的“后台耗电管理”→“小满”→“允许后台高耗电”。其他品牌名称可能不同。
 
-离开 PhonePal 后观察系统通知。2026-11-02 的 vivo 实验中，16:19 的提醒在 16:20:04 创建通知；验收时允许观察一段延迟。当前版本没有提醒列表、取消入口、重启恢复，不能把它用于必须准时的关键提醒。模型说“已设置”只表示已调用排程，最终还要看到通知。
+离开小满后观察系统通知。2026-11-02 的 vivo 实验中，16:19 的提醒在 16:20:04 创建通知；验收时允许观察一段延迟。当前版本没有提醒列表、取消入口、重启恢复，不能把它用于必须准时的关键提醒。模型说“已设置”只表示已调用排程，最终还要看到通知。
 
 ## 作业怎么交
 
@@ -136,4 +136,4 @@ Windows 需要可执行该 shell 脚本的环境；本轮没有完成 Windows �
 
 本版两份生活技能均通过校验。2026-11-02：原方舟账号的 `SetLimitExceeded` 故障已恢复，真实聊天与手机操作正常；美团关键词搜索和两家候选比较已通过。12306 已查询到三班当前候选，核实 G1639 二等座 87 元有票，并在修复确认弹窗后正确点击预订入口、进入登录页。登录页截图呈黑屏，操作模型未能完成该段任务；任务结束后独立核实了登录控件。美团仍要求滑块身份核实，12306 未登录且当前没有短信快捷入口。两边的订单确认、提交、支付/出票均未通过验收。课前先完成登录和身份核实，不能把候选或预订入口成功写成已买到。
 
-当 PhonePal 请求“允许一次”时，新版会返回业务 App 并重新核对页面，再执行动作；如果价格、控件位置或页面改变，会拒绝旧动作并重新观察。对动态页面可能需要再次确认。这个修复可作为讲师补充案例，避免在两节课中同时展开过多底层细节。
+当小满请求“允许一次”时，新版会返回业务 App 并重新核对页面，再执行动作；如果价格、控件位置或页面改变，会拒绝旧动作并重新观察。对动态页面可能需要再次确认。这个修复可作为讲师补充案例，避免在两节课中同时展开过多底层细节。

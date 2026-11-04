@@ -23,8 +23,8 @@ jobs:
       - name: CLI 测试与示例技能校验
         run: |
           (cd cli && python3 -m unittest discover -s tests -v)
-          python3 cli/phonepal.py lint skills/examples/*/
+          python3 cli/xiaoman.py lint skills/examples/*/
       - uses: actions/upload-artifact@v4
         with:
-          name: phonepal-debug-apk
+          name: xiaoman-debug-apk
           path: app/build/outputs/apk/debug/*.apk

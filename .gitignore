@@ -10,5 +10,5 @@ captures/
 .env
 __pycache__/
 .DS_Store
-# phonepal traces pull/show 的默认输出目录
+# xiaoman traces pull/show 的默认输出目录
 /traces/

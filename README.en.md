@@ -1,4 +1,4 @@
-# PhonePal
+# Xiaoman
 
 [中文](README.md)
 
@@ -33,9 +33,9 @@ header for its environment variables.
 
 ## Use
 
-1. Install the debug APK and open PhonePal.
+1. Install the debug APK and open Xiaoman.
 2. Settings: enter base URL, model and API key for the chat and operator models.
-3. Turn on the PhonePal accessibility service when the app asks.
+3. Turn on the Xiaoman accessibility service when the app asks.
 4. Chat: "帮我打车回家", "记住我家在 ...", "把 Wi-Fi 打开".
 
 ## Skills and developer CLI
@@ -45,10 +45,10 @@ header for its environment variables.
   debug build and shows traces:
 
 ```
-python3 cli/phonepal.py lint skills/examples/*
-python3 cli/phonepal.py push skills/examples/taxi-home
-python3 cli/phonepal.py run "打开设置里的 Wi-Fi 页面" --skill open-settings-wifi --follow
-python3 cli/phonepal.py traces show <run_id>
+python3 cli/xiaoman.py lint skills/examples/*
+python3 cli/xiaoman.py push skills/examples/taxi-home
+python3 cli/xiaoman.py run "打开设置里的 Wi-Fi 页面" --skill open-settings-wifi --follow
+python3 cli/xiaoman.py traces show <run_id>
 ```
 
 ## Layout
@@ -59,7 +59,7 @@ LLM client, memory, skills, sentinel, agent), `hands` is the accessibility layer
 ## Memory
 
 Notes are Markdown files in the Basic Memory format under
-`/sdcard/Android/data/dev.phonepal.app/files/memory/`, so you can read and edit them in Obsidian.
+`/sdcard/Android/data/dev.xiaoman.app/files/memory/`, so you can read and edit them in Obsidian.
 Forgetting deletes the file.
 
 ## License

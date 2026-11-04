@@ -33,10 +33,10 @@ val bundleSkills = tasks.register<BundleSkillsTask>("bundleSkillAssets") {
 }
 
 android {
-    namespace = "dev.phonepal.app"
+    namespace = "dev.xiaoman.app"
     compileSdk = 35
     defaultConfig {
-        applicationId = "dev.phonepal.app"
+        applicationId = "dev.xiaoman.app"
         minSdk = 30
         targetSdk = 35
         versionCode = 1

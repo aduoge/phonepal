@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "phonepal"
+rootProject.name = "xiaoman"
 
 include(
     ":core-api",

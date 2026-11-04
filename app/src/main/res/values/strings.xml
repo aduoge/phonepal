@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">PhonePal</string>
+    <string name="app_name">小满</string>
 
     <!-- Navigation -->
     <string name="nav_chat">聊天</string>
@@ -10,17 +10,17 @@
     <string name="back">返回</string>
 
     <!-- Chat -->
-    <string name="chat_input_hint">和 PhonePal 说点什么</string>
-    <string name="chat_answer_hint">回答 PhonePal 的问题</string>
+    <string name="chat_input_hint">和小满说点什么</string>
+    <string name="chat_answer_hint">回答小满的问题</string>
     <string name="chat_send">发送</string>
     <string name="chat_stop">停止</string>
-    <string name="chat_busy">PhonePal 正在处理上一条消息</string>
+    <string name="chat_busy">小满正在处理上一条消息</string>
     <string name="chat_empty">告诉我你想做什么，比如「打车回家」或「记住我家在北京市海淀区」。</string>
-    <string name="chat_question_label">PhonePal 问</string>
+    <string name="chat_question_label">小满问</string>
     <string name="chat_takeover_label">需要你接管</string>
     <string name="chat_takeover_hint">请在手机上完成操作（登录、验证码或安全页面），完成后在这里回复「好了」。</string>
     <string name="chat_error_label">出错了</string>
-    <string name="banner_accessibility">无障碍服务未开启，PhonePal 还不能操作其他 App。</string>
+    <string name="banner_accessibility">无障碍服务未开启，小满还不能操作其他 App。</string>
     <string name="banner_accessibility_action">去开启</string>
     <string name="banner_models">还没有配置聊天模型和操作模型。</string>
     <string name="banner_models_action">去设置</string>
@@ -79,13 +79,13 @@
 
     <!-- Service and notifications -->
     <string name="channel_status">任务状态</string>
-    <string name="channel_status_description">PhonePal 正在运行任务时显示</string>
+    <string name="channel_status_description">小满正在运行任务时显示</string>
     <string name="channel_attention">需要你处理</string>
-    <string name="channel_attention_description">PhonePal 需要你确认或回答问题时提醒</string>
+    <string name="channel_attention_description">小满需要你确认或回答问题时提醒</string>
     <string name="channel_reminders">定时提醒</string>
     <string name="channel_reminders_description">你设置的提醒到点时通知</string>
-    <string name="notification_running">PhonePal 正在工作</string>
-    <string name="notification_question">PhonePal 有问题要问你</string>
+    <string name="notification_running">小满正在工作</string>
+    <string name="notification_question">小满有问题要问你</string>
     <string name="reminder_title">提醒</string>
 
     <!-- Session messages -->

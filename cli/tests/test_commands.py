@@ -10,12 +10,12 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 
-from phonepal_cli.adb import Adb, broadcast_command  # noqa: E402
-from phonepal_cli.main import build_parser, main, new_run_id  # noqa: E402
+from xiaoman_cli.adb import Adb, broadcast_command  # noqa: E402
+from xiaoman_cli.main import build_parser, main, new_run_id  # noqa: E402
 
 FIXTURE = os.path.join(HERE, "fixtures", "skills", "ride-home")
-SKILLS = "/sdcard/Android/data/dev.phonepal.app/files/skills"
-RECEIVER = "dev.phonepal.app/.debug.DebugReceiver"
+SKILLS = "/sdcard/Android/data/dev.xiaoman.app/files/skills"
+RECEIVER = "dev.xiaoman.app/.debug.DebugReceiver"
 
 
 class Result:
@@ -81,8 +81,8 @@ def remote_words(argv):
 class BroadcastTest(unittest.TestCase):
     def test_quoting_roundtrip(self):
         goal = "打开 设置 里的 \"WLAN\"; rm -rf / $(x) 'q'"
-        cmd = broadcast_command("dev.phonepal.debug.RUN", [("goal", goal), ("skill", None), ("run_id", "r1")])
-        self.assertEqual(shlex.split(cmd), ["am", "broadcast", "-n", RECEIVER, "-a", "dev.phonepal.debug.RUN",
+        cmd = broadcast_command("dev.xiaoman.debug.RUN", [("goal", goal), ("skill", None), ("run_id", "r1")])
+        self.assertEqual(shlex.split(cmd), ["am", "broadcast", "-n", RECEIVER, "-a", "dev.xiaoman.debug.RUN",
                                             "--es", "goal", goal, "--es", "run_id", "r1"])
 
     def test_run_id(self):
@@ -100,7 +100,7 @@ class CommandTest(unittest.TestCase):
         self.assertEqual(argv[:4], ["adb", "-s", "emu1", "shell"])
         self.assertEqual(len(argv), 5)
         self.assertEqual(remote_words(argv), [
-            "am", "broadcast", "-n", RECEIVER, "-a", "dev.phonepal.debug.RUN",
+            "am", "broadcast", "-n", RECEIVER, "-a", "dev.xiaoman.debug.RUN",
             "--es", "goal", "打开 设置", "--es", "skill", "open-settings-wifi", "--es", "run_id", "r1"])
         self.assertIn("started run r1", out)
 
@@ -135,17 +135,17 @@ class CommandTest(unittest.TestCase):
     def test_run_follow(self):
         lines = [
             "--------- beginning of main\n",
-            "10-31 12:00:00.000  1  1 I PhonePal: old StepPlanned {\"step\": 9}\n",
-            "10-31 12:00:01.000  1  1 I PhonePal: r9 PhoneTaskStarted {\"goal\": \"打开设置\"}\n",
-            "10-31 12:00:02.000  1  1 I PhonePal: r9 StepPlanned {\"step\": 0, \"action\": {\"type\": \"home\"}}\n",
-            "10-31 12:00:03.000  1  1 I PhonePal: r9 PhoneTaskFinished {\"success\": true, \"summary\": \"ok\"}\n",
-            "10-31 12:00:04.000  1  1 I PhonePal: r9 StepPlanned {\"step\": 99}\n",
+            "10-31 12:00:00.000  1  1 I Xiaoman: old StepPlanned {\"step\": 9}\n",
+            "10-31 12:00:01.000  1  1 I Xiaoman: r9 PhoneTaskStarted {\"goal\": \"打开设置\"}\n",
+            "10-31 12:00:02.000  1  1 I Xiaoman: r9 StepPlanned {\"step\": 0, \"action\": {\"type\": \"home\"}}\n",
+            "10-31 12:00:03.000  1  1 I Xiaoman: r9 PhoneTaskFinished {\"success\": true, \"summary\": \"ok\"}\n",
+            "10-31 12:00:04.000  1  1 I Xiaoman: r9 StepPlanned {\"step\": 99}\n",
         ]
         fake = FakeAdb(lines)
         code, out, _ = fake.run_main(["run", "打开设置", "--run-id", "r9", "--follow"])
         self.assertEqual(code, 0)
         # logcat is spawned before the broadcast
-        self.assertEqual(fake.calls[0], ("spawn", ["adb", "logcat", "-v", "threadtime", "-s", "PhonePal"]))
+        self.assertEqual(fake.calls[0], ("spawn", ["adb", "logcat", "-v", "threadtime", "-s", "Xiaoman"]))
         self.assertEqual(fake.calls[1][0], "run")
         shown = out.strip().splitlines()
         self.assertEqual(len(shown), 3)
@@ -154,7 +154,7 @@ class CommandTest(unittest.TestCase):
         self.assertTrue(fake.procs[0].terminated)
 
     def test_run_follow_failure_exit_code(self):
-        fake = FakeAdb(["I PhonePal: r9 Failed {\"message\": \"x\"}\n"])
+        fake = FakeAdb(["I Xiaoman: r9 Failed {\"message\": \"x\"}\n"])
         code, _, _ = fake.run_main(["run", "g", "--run-id", "r9", "-f"])
         self.assertEqual(code, 1)
         fake = FakeAdb([])
@@ -166,7 +166,7 @@ class CommandTest(unittest.TestCase):
         fake = FakeAdb()
         self.assertEqual(fake.run_main(["stop"])[0], 0)
         self.assertEqual(remote_words(fake.calls[0][1]),
-                         ["am", "broadcast", "-n", RECEIVER, "-a", "dev.phonepal.debug.STOP"])
+                         ["am", "broadcast", "-n", RECEIVER, "-a", "dev.xiaoman.debug.STOP"])
 
     def test_broadcast_error_output(self):
         fake = FakeAdb(results={"STOP": Result(0, "Error: Bad component name")})
@@ -191,9 +191,9 @@ class CommandTest(unittest.TestCase):
 
     def test_logs(self):
         lines = [
-            "I PhonePal: r1 StepPlanned {\"step\": 1}\n",
-            "I PhonePal: r2 StepPlanned {\"step\": 2}\n",
-            "I PhonePal: skills reloaded: 1 problem\n",
+            "I Xiaoman: r1 StepPlanned {\"step\": 1}\n",
+            "I Xiaoman: r2 StepPlanned {\"step\": 2}\n",
+            "I Xiaoman: skills reloaded: 1 problem\n",
         ]
         code, out, _ = FakeAdb(lines).run_main(["logs"])
         self.assertEqual(code, 0)
@@ -215,7 +215,7 @@ class PushTest(unittest.TestCase):
                                    SKILLS + "/ride-home/SKILL.md"])
         self.assertEqual(runs[2], ["adb", "-s", "S", "push", os.path.join(FIXTURE, "flow.yaml"),
                                    SKILLS + "/ride-home/flow.yaml"])
-        self.assertEqual(remote_words(runs[3])[-1], "dev.phonepal.debug.RELOAD_SKILLS")
+        self.assertEqual(remote_words(runs[3])[-1], "dev.xiaoman.debug.RELOAD_SKILLS")
         self.assertEqual(len(runs), 4)
 
     def test_push_refuses_invalid(self):
@@ -248,7 +248,7 @@ class TracesCommandTest(unittest.TestCase):
             code, out, _ = fake.run_main(["traces", "pull", "r1", "--out", out_dir])
             self.assertEqual(code, 0)
             self.assertEqual(fake.calls[0][1], ["adb", "pull",
-                                                "/sdcard/Android/data/dev.phonepal.app/files/traces/r1", out_dir])
+                                                "/sdcard/Android/data/dev.xiaoman.app/files/traces/r1", out_dir])
             self.assertTrue(os.path.isdir(out_dir))
             self.assertIn(os.path.join(out_dir, "r1"), out)
         finally:

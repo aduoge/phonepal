@@ -6,7 +6,7 @@ channel: deeplink-then-gui
 confirm_before: [确认呼叫]
 memory: [places/家]
 deeplinks:
-  route: "amapuri://route/plan/?sourceApplication=phonepal&dname={destination}&dev=0&t=0"
+  route: "amapuri://route/plan/?sourceApplication=xiaoman&dname={destination}&dev=0&t=0"
 ---
 # 高德打车回家
 
