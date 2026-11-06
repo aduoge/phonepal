@@ -1,0 +1,45 @@
+{
+  "_comment": "将需要的环境变量注入小满；stdio 社区服务器仅适用于桌面端，需要自行安装 Node.js/npx。",
+  "mcpServers": {
+    "amap": {
+      "title": "高德地图",
+      "url": "https://mcp.amap.com/mcp?key=${AMAP_MAPS_API_KEY}",
+      "confirm": "none",
+      "_comment": "官方服务：在高德开放平台 https://lbs.amap.com/ 申请 Key。"
+    },
+    "tencent-map": {
+      "title": "腾讯地图",
+      "url": "https://mcp.map.qq.com/mcp?key=${TENCENT_MAP_KEY}",
+      "confirm": "none",
+      "_comment": "官方服务：在腾讯位置服务 https://lbs.qq.com/ 申请 Key。"
+    },
+    "12306": {
+      "title": "火车票查询",
+      "command": "npx",
+      "args": ["-y", "12306-mcp"],
+      "confirm": "none",
+      "_comment": "社区项目（npm 12306-mcp），非铁路 12306 官方 MCP 服务。"
+    },
+    "didi": {
+      "title": "滴滴出行",
+      "url": "https://mcp.didichuxing.com/mcp-servers?key=${DIDI_MCP_KEY}",
+      "confirm": "writes",
+      "enabled": false,
+      "_comment": "官方服务：向滴滴开放平台 https://open.didichuxing.com/ 了解 MCP Key 申请；默认关闭。"
+    },
+    "mcdonalds": {
+      "title": "麦当劳",
+      "url": "https://mcp.mcd.cn",
+      "headers": {"Authorization": "Bearer ${MCD_MCP_TOKEN}"},
+      "confirm": "writes",
+      "enabled": false,
+      "_comment": "官方服务：通过 https://mcp.mcd.cn 获取 MCP Token；默认关闭。"
+    },
+    "aihot": {
+      "title": "AI 热点资讯",
+      "url": "https://aihot.news/api/mcp",
+      "confirm": "none",
+      "_comment": "AIhot 站点提供的匿名 MCP 资讯服务：https://aihot.news/。"
+    }
+  }
+}

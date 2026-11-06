@@ -1,0 +1,19 @@
+#!/bin/sh
+# 课堂令牌管理（install.sh 装到服务器 /usr/local/bin/xiaoman-tokens）。只能在服务器本机运行。
+# 以服务用户 xiaoman 运行 `web-server tokens`，这样令牌文件始终归服务所有；运行中的服务约 1 秒内生效。
+#   sudo xiaoman-tokens generate 30 --csv > tokens.csv
+#   sudo xiaoman-tokens list | revoke 学员03 | revoke-all | limit --all --daily 300000
+#   sudo xiaoman-tokens --help
+set -eu
+[ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"
+env_file=/etc/xiaoman-web/env
+value() { [ -f "$env_file" ] && sed -n "s/^$1=//p" "$env_file" | head -1; }
+tokens="$(value XIAOMAN_CLASS_TOKENS || true)"
+tz="$(value XIAOMAN_TZ || true)"
+cd /
+# The upstream key is not passed on: managing tokens does not need it.
+if command -v runuser >/dev/null 2>&1; then run() { runuser -u xiaoman -- "$@"; }; else run() { sudo -u xiaoman -- "$@"; }; fi
+run env -i PATH=/usr/local/bin:/usr/bin:/bin LANG=C.UTF-8 \
+  XIAOMAN_CLASS_TOKENS="${tokens:-/var/lib/xiaoman-web/class-tokens.json}" XIAOMAN_TZ="${tz:-Asia/Shanghai}" \
+  JAVA_OPTS="-Xmx128m -XX:+UseSerialGC -Dfile.encoding=UTF-8" \
+  /opt/xiaoman-web/current/bin/web-server tokens "$@"

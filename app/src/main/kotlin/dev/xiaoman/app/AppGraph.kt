@@ -16,6 +16,14 @@ import dev.xiaoman.hands.MutableStopSignal
 import dev.xiaoman.hands.XiaomanAccessibilityService
 import dev.xiaoman.llm.LlmClientFactory
 import dev.xiaoman.llm.LlmClients
+import dev.xiaoman.app.settings.McpSettingsStore
+import dev.xiaoman.mcp.McpCatalog
+import dev.xiaoman.mcp.McpConfig
+import dev.xiaoman.mcp.McpPlatform
+import dev.xiaoman.mcp.McpSelection
+import dev.xiaoman.mcp.McpToolProvider
+import dev.xiaoman.mcp.ServerStatus
+import dev.xiaoman.mcp.UserChannelApprovals
 import dev.xiaoman.memory.FileMemoryStore
 import dev.xiaoman.sentinel.PolicySentinel
 import dev.xiaoman.skills.DirectorySkillRepository
@@ -34,7 +42,8 @@ import java.io.IOException
  * [XiaomanApp.onCreate].
  *
  * Folders (`<external files>` = `/sdcard/Android/data/dev.xiaoman.app/files`):
- * `memory/`, `skills/` (user skills, override bundled ones), `traces/`; bundled skills are
+ * `memory/`, `skills/` (user skills, override bundled ones), `traces/`, optional `mcp.json` (MCP servers,
+ * HTTP only; keys are written in the file because Android has no environment); bundled skills are
  * extracted to `<files>/bundled-skills/`.
  */
 class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.default) {
@@ -48,6 +57,7 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     val skillsDir = File(externalRoot, "skills")
     val tracesDir = File(externalRoot, "traces")
     val bundledSkillsDir = File(app.filesDir, "bundled-skills")
+    val mcpFile = File(externalRoot, "mcp.json")
 
     val settings: SettingsStore by lazy { SettingsStore.create(app) }
 
@@ -58,6 +68,38 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     val notifier by lazy { Notifier(app) }
 
     val reminderScheduler by lazy { AlarmReminderScheduler(app) }
+
+    /** Services ticked on the 服务 screen; keys live in the encrypted settings file. */
+    val mcpSettings: McpSettingsStore by lazy { McpSettingsStore.create(app, settings.secret) }
+
+    private var cachedMcp: Pair<McpSelection, McpToolProvider?>? = null
+
+    /** MCP config of [selection] plus the HTTP servers of the optional `mcp.json` (stdio needs a desktop). */
+    fun mcpConfig(selection: McpSelection): McpConfig {
+        val ticked = McpCatalog.builtIn.toConfig(selection, McpPlatform.ANDROID)
+        val file = McpConfig.load(mcpFile, emptyMap())
+        val fileServers = file.servers.filter { it.enabled && it.url != null && ticked.servers.none { t -> t.name == it.name } }
+        (ticked.warnings + file.warnings).forEach { Log.w(TAG, "mcp: $it") }
+        return McpConfig(ticked.servers + fileServers, ticked.warnings + file.warnings)
+    }
+
+    /** The provider for [selection], rebuilt (and the old one closed) when the ticked services change. */
+    @Synchronized
+    private fun mcpFor(selection: McpSelection): McpToolProvider? {
+        cachedMcp?.let { (s, provider) -> if (s == selection) return provider }
+        cachedMcp?.second?.close()
+        val config = mcpConfig(selection)
+        val provider = if (config.servers.isEmpty()) null else McpToolProvider(config, UserChannelApprovals(session))
+        cachedMcp = selection to provider
+        return provider
+    }
+
+    /** Connects to the services of [selection] once, for the 测试连接 button; never kept. */
+    suspend fun testMcp(selection: McpSelection): List<ServerStatus> {
+        val config = mcpConfig(selection)
+        if (config.servers.isEmpty()) return emptyList()
+        return McpToolProvider(config, { false }).use { it.status(refresh = true) }
+    }
 
     val runIds = RunIds()
     val uiVisible = MutableStateFlow(false)
@@ -101,14 +143,15 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
     lateinit var startup: Deferred<Unit>
         private set
 
-    private var cachedAgent: Pair<AppSettings, Agent>? = null
+    private var cachedAgent: Pair<Pair<AppSettings, McpSelection>, Agent>? = null
 
     /** The agent for the current settings, rebuilt when they change; null until both models are configured. */
     @Synchronized
     fun agent(): Agent? {
         val current = settings.current
         if (!current.configured) return null
-        cachedAgent?.let { (s, agent) -> if (s == current) return agent }
+        val key = current to mcpSettings.current
+        cachedAgent?.let { (k, agent) -> if (k == key) return agent }
         val agent = XiaomanAgent(
             chat = llm.create(current.chat.toModelConfig(ModelRole.CHAT)),
             operator = llm.create(current.operator.toModelConfig(ModelRole.OPERATOR)),
@@ -120,8 +163,9 @@ class AppGraph(context: Context, private val llm: LlmClientFactory = LlmClients.
             reminders = reminderScheduler,
             config = current.agentConfig(),
             idFactory = runIds::next,
+            externalTools = mcpFor(key.second),
         )
-        cachedAgent = current to agent
+        cachedAgent = key to agent
         return agent
     }
 

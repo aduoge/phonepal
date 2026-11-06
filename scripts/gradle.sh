@@ -7,7 +7,8 @@
 #                       else ${XDG_CACHE_HOME:-~/.cache}/xiaoman/<checkout hash>/out)
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-key="$(printf '%s' "$here" | sha1sum | cut -c1-12)"
+sha1() { if command -v sha1sum >/dev/null; then sha1sum; else shasum -a 1; fi; }
+key="$(printf '%s' "$here" | sha1 | cut -c1-12)"
 toolchain="${XIAOMAN_TOOLCHAIN:-}"
 if [[ -n "$toolchain" ]]; then
   base="$(dirname "$toolchain")/builds/$key"

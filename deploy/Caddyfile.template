@@ -1,0 +1,46 @@
+# 小满网页版的 Caddy 配置模板。install.sh 会把 __SITE__ 和 __PORT__ 换成实际值，写到 /etc/caddy/Caddyfile。
+#
+# __SITE__ 两种写法（Caddy 都会自动申请 Let's Encrypt 证书并续期，需要服务器 80/443 对公网开放）：
+#   1. 自有域名：先把域名的 A 记录指向服务器公网 IP，例如  xiaoman.example.com
+#   2. 没有域名：用 sslip.io，它把 <ip>.sslip.io 解析成 <ip>，例如  203.0.113.10.sslip.io
+#
+# __PORT__ 是 web-server 只在本机监听的端口（默认 8787），不要在防火墙里对外开放它。
+
+__SITE__ {
+	encode gzip
+
+	# 聊天接口是 SSE 事件流：收到就立刻转发，不缓冲。
+	reverse_proxy 127.0.0.1:__PORT__ {
+		flush_interval -1
+		transport http {
+			read_timeout 10m
+		}
+	}
+
+	# 与 web-server 自身的 256KB 上限对应，多余的请求在 Caddy 这一层就拒绝。
+	# 课堂令牌的 /v1 接口要带手机截图，web-server 限制 8MB（XIAOMAN_CLASS_MAX_BODY_MB），这里留一点余量。
+	@classApi path /v1/*
+	@otherApi not path /v1/*
+	request_body @classApi {
+		max_size 10MB
+	}
+	request_body @otherApi {
+		max_size 1MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	# 默认不记访问日志。若要开启 log，请务必过滤掉访问码、会话和 Authorization（课堂令牌）请求头，例如：
+	# log {
+	# 	format filter {
+	# 		wrap console
+	# 		fields {
+	# 			request>headers>X-Xiaoman-Access delete
+	# 			request>headers>X-Xiaoman-Session delete
+	# 		}
+	# 	}
+	# }
+}

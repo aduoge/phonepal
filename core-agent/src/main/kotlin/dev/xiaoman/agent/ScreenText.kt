@@ -4,8 +4,8 @@ import dev.xiaoman.api.Action
 import dev.xiaoman.api.ScreenState
 import dev.xiaoman.api.UiNode
 
-/** Text views of screens and actions for prompts, history and learning notes. */
-internal object ScreenText {
+/** Text views of screens and actions for prompts, history, learning notes and developer tools. */
+object ScreenText {
     /** Approval is valid only for the same visible controls, prices and geometry. */
     fun matchesApprovalScreen(before: ScreenState?, after: ScreenState): Boolean =
         before != null && !before.secure && !after.secure && before.packageName != null &&

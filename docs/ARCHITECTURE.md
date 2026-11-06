@@ -4,7 +4,7 @@
 App。框架负责“手”（无障碍操作）、“眼”（读屏）、记忆、安全闸门和模型调用；具体场景（打车、外卖、
 购票……）由用户以**场景技能**的形式添加。技能是 Markdown/YAML 小文件夹，不需要重新打包 APK。
 
-需要 Android 11（API 30）及以上。iOS 不允许一个 App 操作其他 App，见 README。
+需要 Android 11（API 30）及以上。iOS 不允许一个 App 操作其他 App，只能由 Mac 通过 WebDriverAgent 操作 iPhone（`ios-hands` + `ios-runner`），见 [ios.md](ios.md)。
 
 ## 模块
 
@@ -18,6 +18,10 @@ App。框架负责“手”（无障碍操作）、“眼”（读屏）、记�
 | `core-agent` | Kotlin/JVM | `XiaomanAgent`：聊天编排、操作循环、技能流程、经验笔记 |
 | `hands` | Android 库 | `XiaomanAccessibilityService`、`AccessibilityDevice`、状态悬浮窗 |
 | `app` | Android 应用 | 聊天界面、设置、技能与记忆页面、授权确认、调试桥、轨迹 |
+| `core-mcp` | Kotlin/JVM | `McpToolProvider`：把 MCP 服务器（高德、滴滴等）的工具交给聊天模型，带确认策略与密钥脱敏，见 [mcp.md](mcp.md) |
+| `web-server` | Kotlin/JVM 应用 | 网页版：同源移动端网页 + `/api/*`（SSE 聊天、确认、MCP 目录与测试），每个会话一个不操作手机的 `XiaomanAgent`，见 [web.md](web.md) |
+| `ios-hands` | Kotlin/JVM | `WdaDevice`：通过 iPhone 上的 WebDriverAgent 实现 `Device`（截图、界面树、点击、输入、返回） |
+| `ios-runner` | Kotlin/JVM 命令行 | Mac 上的 `ios-runner`：把 `core-*` 与 `WdaDevice` 组装起来，终端确认、轨迹、提醒 |
 | `cli/` | Python 3（仅标准库） | 面向技能作者的开发工具：通过 adb 做校验、推送、运行、日志、轨迹 |
 
 五个 `core-*` JVM 模块不接触任何 Android API，可以在任意机器上跑单元测试。依赖方向：

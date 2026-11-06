@@ -1,0 +1,12 @@
+{
+  "name": "小满",
+  "short_name": "小满",
+  "lang": "zh-CN",
+  "description": "小满：你的随身小助手",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f7f9f6",
+  "theme_color": "#f7f9f6",
+  "icons": [{"src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}, {"src": "apple-touch-icon.png", "sizes": "180x180", "type": "image/png"}]
+}

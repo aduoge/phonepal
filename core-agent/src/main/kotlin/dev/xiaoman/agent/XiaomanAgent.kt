@@ -1,5 +1,7 @@
 package dev.xiaoman.agent
 
+import dev.xiaoman.api.ToolProvider
+import dev.xiaoman.api.ToolSpec
 import dev.xiaoman.api.Agent
 import dev.xiaoman.api.AgentConfig
 import dev.xiaoman.api.AgentEvent
@@ -44,6 +46,8 @@ class XiaomanAgent(
     private val persona: String = Prompts.DEFAULT_PERSONA,
     private val clock: () -> Long = System::currentTimeMillis,
     private val idFactory: () -> String = { UUID.randomUUID().toString() },
+    /** Extra tools such as MCP servers; their names must not shadow the built-in ones. */
+    private val externalTools: ToolProvider? = null,
 ) : Agent {
     private val loop = OperatorLoop(operator, device, sentinel, users, config)
     private val flows = FlowRunner(loop, users)
@@ -53,9 +57,13 @@ class XiaomanAgent(
     override suspend fun handle(userMessage: String, listener: AgentListener, stop: StopSignal) {
         val taskId = idFactory()
         val emit: (AgentEvent) -> Unit = listener::onEvent
-        val tools = ChatTools(memory, skills, clock, reminders) { goal, skill -> runPhoneTask(goal, skill, listener, stop) }
+        val tools = ChatTools(memory, skills, clock, reminders, externalTools, phoneTasks = config.phoneTasks) { goal, skill ->
+            runPhoneTask(goal, skill, listener, stop)
+        }
         try {
-            val system = ChatMessage.system(systemPrompt(userMessage))
+            val builtIn = builtInSpecs()
+            val toolSpecs = builtIn + externalSpecs()
+            val system = ChatMessage.system(systemPrompt(userMessage, hasExternalTools = toolSpecs.size > builtIn.size))
             val past = historyLock.withLock { history.toList() }
             val turn = mutableListOf(ChatMessage.user(userMessage))
             var lastText: String? = null
@@ -63,7 +71,7 @@ class XiaomanAgent(
             for (round in 0..MAX_TOOL_ROUNDS) {
                 val offerTools = round < MAX_TOOL_ROUNDS
                 val response = chat.complete(
-                    ChatRequest(listOf(system) + past + turn, tools = if (offerTools) AgentTools.specs else emptyList()),
+                    ChatRequest(listOf(system) + past + turn, tools = if (offerTools) toolSpecs else emptyList()),
                 )
                 val text = response.text.trim()
                 if (response.toolCalls.isEmpty() || !offerTools) {
@@ -120,8 +128,25 @@ class XiaomanAgent(
         return finish(outcome.success, outcome.summary, task.steps)
     }
 
-    private suspend fun systemPrompt(userMessage: String): String = buildString {
+    private fun builtInSpecs(): List<ToolSpec> =
+        if (config.phoneTasks) AgentTools.specs else AgentTools.specs.filter { it.name != AgentTools.PHONE_TASK }
+
+    /** External tools that do not clash with built-in names; a failing provider simply offers nothing. */
+    private suspend fun externalSpecs(): List<ToolSpec> {
+        val provider = externalTools ?: return emptyList()
+        val builtIn = AgentTools.specs.map { it.name }.toSet()
+        return try {
+            provider.specs().filter { it.name !in builtIn }.distinctBy { it.name }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+
+    private suspend fun systemPrompt(userMessage: String, hasExternalTools: Boolean = false): String = buildString {
         append(persona.trim())
+        if (hasExternalTools) append("\n").append(Prompts.EXTERNAL_TOOLS_HINT)
         append("\n\n").append(Prompts.nowSection(ReminderTimes.promptNow(clock())))
         append("\n\n").append(Prompts.SKILLS_HEADER).append('\n')
         val list = quietly(emptyList()) { skills.list() }

@@ -9,6 +9,7 @@ import dev.xiaoman.api.ReminderScheduler
 import dev.xiaoman.api.Skill
 import dev.xiaoman.api.SkillRepository
 import dev.xiaoman.api.ToolCall
+import dev.xiaoman.api.ToolProvider
 import kotlinx.coroutines.CancellationException
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -29,6 +30,8 @@ internal class ChatTools(
     private val skills: SkillRepository,
     private val clock: () -> Long,
     private val reminders: ReminderScheduler,
+    private val external: ToolProvider?,
+    private val phoneTasks: Boolean = true,
     private val phoneTask: suspend (goal: String, skill: String?) -> AgentEvent.PhoneTaskFinished,
 ) {
     suspend fun execute(call: ToolCall, taskId: String, emit: (AgentEvent) -> Unit): String = try {
@@ -40,8 +43,8 @@ internal class ChatTools(
             AgentTools.MEMORY_FORGET -> forget(args, taskId, emit)
             AgentTools.LIST_SKILLS -> listSkills()
             AgentTools.REMINDER_SET -> reminder(args)
-            AgentTools.PHONE_TASK -> phone(args)
-            else -> error("未知工具 ${call.name}")
+            AgentTools.PHONE_TASK -> if (phoneTasks) phone(args) else error("这里不能操作手机，请用其他工具或告诉用户自己操作")
+            else -> external(call, taskId, emit)
         }
     } catch (e: CancellationException) {
         throw e
@@ -170,6 +173,12 @@ internal class ChatTools(
             put("text", text)
             put("at", raw)
         }.toString()
+    }
+
+    private suspend fun external(call: ToolCall, taskId: String, emit: (AgentEvent) -> Unit): String {
+        val result = external?.call(taskId, call.name, call.argumentsJson) ?: return error("未知工具 ${call.name}")
+        emit(AgentEvent.ToolCalled(taskId, call.name, result.ok, result.summary))
+        return result.text
     }
 
     private suspend fun phone(args: JsonObject): String {

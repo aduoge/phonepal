@@ -8,7 +8,12 @@ New scenarios are **skills**: small `SKILL.md` + `flow.yaml` folders you can pus
 the APK.
 
 - Android 11 (API 30) or newer. It uses an accessibility service to read the screen and act.
-- iOS is not supported: iOS does not let one app read or operate other apps.
+- iOS cannot run it on the phone alone (one app may not operate other apps). You can try it from a Mac
+  that drives the iPhone through WebDriverAgent; see [docs/ios.md](docs/ios.md) (Chinese).
+- MCP servers (Amap, Tencent Maps, DiDi, 12306 ...) can serve lookups and bookings without operating
+  the phone; see [docs/mcp.md](docs/mcp.md) (Chinese).
+- A web version (add to the iPhone home screen) offers chat and one-tap MCP services without an app;
+  see [docs/web.md](docs/web.md) (Chinese).
 - Models: any OpenAI-compatible endpoint (Volcano Ark, Bailian, OpenRouter, vLLM, Ollama ...). You
   configure a chat model and a screen ("operator") model that accepts images.
 

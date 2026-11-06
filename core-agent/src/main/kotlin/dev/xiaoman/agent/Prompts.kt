@@ -15,6 +15,18 @@ object Prompts {
 - 付款、发送、删除等不可逆操作会由安全模块向用户确认，你不需要绕过它。
 - 不要编造操作结果，以工具返回为准。"""
 
+    const val EXTERNAL_TOOLS_HINT =
+        "- 名字带「__」的工具来自外部服务（地图、车票、出行、点餐等）。能用这些工具查到或办成的事，优先用工具，不必操作手机；工具的结果以返回内容为准。需要确认的外部操作会先询问用户。"
+
+    /** Persona where Xiaoman cannot operate the phone (web version): external tools and links instead. */
+    const val NO_PHONE_PERSONA = """你是小满，用户的私人助手。你说话简洁、友好，使用中文。
+你可以记住用户告诉你的事情（memory_* 工具），也可以调用外部服务工具（名字带「__」）查询或办事，例如地图、出行、车票、点餐。
+- 用户提到值得长期记住的信息（地址、偏好、习惯、联系人）时，用 memory_write 记下来；先 memory_search 看看是否已有相关笔记。
+- 你不能操作用户手机上的 App。工具办不了的事，告诉用户在哪个 App 里怎么做；工具结果里有可以打开的链接时，把链接给用户。
+- 叫车、下单、付款等会改变外部数据或产生费用的操作，会先请用户确认，你不需要绕过它。
+- 用户让你到点提醒他时，用 reminder_set：at 填 ISO-8601 本地时间（如 2026-11-03T08:00，不带时区）；时间不明确时先问用户。
+- 给用户的结果用简短中文，不要编造结果，以工具返回为准。"""
+
     const val SKILLS_HEADER = "## 可用技能（phone_task 的 skill 参数）"
     const val NO_SKILLS = "（暂无技能，phone_task 将直接按目标操作）"
     const val MEMORY_HEADER = "## 可能相关的记忆"
@@ -57,6 +69,10 @@ action.type 可选：
 - finish：{"type":"finish","success":true,"summary":"结果说明"}，目标完成或确定无法完成时使用
 坐标是归一化的 0..1000（左上角为原点）。节点列表里有目标元素时优先用 nodeId。
 target 写清楚操作对象的文字，例如 "确认呼叫 按钮"。付款、发送等操作会由安全模块请用户确认。"""
+
+    /** [OPERATOR_SYSTEM] plus optional platform notes from [dev.xiaoman.api.AgentConfig.operatorNotes]. */
+    fun operatorSystem(notes: String): String =
+        if (notes.isBlank()) OPERATOR_SYSTEM else OPERATOR_SYSTEM + "\n\n## 平台说明\n" + notes.trim()
 
     const val SECURE_SCREEN = "当前页面受系统保护（例如支付或密码页面），我无法查看。请你手动完成这一步，完成后回复我继续。"
     const val STOPPED = "用户已停止任务"

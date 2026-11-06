@@ -22,6 +22,9 @@ sealed class AgentEvent {
 
     data class MemoryUpdated(override val taskId: String, val permalink: String) : AgentEvent()
 
+    /** A [ToolProvider] tool (for example an MCP server) ran; [summary] is short and never contains secrets. */
+    data class ToolCalled(override val taskId: String, val tool: String, val ok: Boolean, val summary: String) : AgentEvent()
+
     data class PhoneTaskFinished(override val taskId: String, val success: Boolean, val summary: String, val steps: Int) : AgentEvent()
 
     data class Failed(override val taskId: String, val message: String) : AgentEvent()
@@ -46,6 +49,10 @@ data class AgentConfig(
     val maxNodes: Int = 120,
     /** Write a "how to" note into memory after a successful phone task. */
     val learnFromSuccess: Boolean = true,
+    /** Platform notes appended to the operator system prompt, e.g. how back and launch work on iOS. */
+    val operatorNotes: String = "",
+    /** Offer `phone_task` to the chat model. Off where there is no phone to operate, e.g. the web version. */
+    val phoneTasks: Boolean = true,
 )
 
 /** Cooperative cancellation from the overlay's Stop button. */

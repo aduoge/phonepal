@@ -7,7 +7,9 @@
 就是一个包含 `SKILL.md` 和可选 `flow.yaml` 的小文件夹，推到手机上即可生效，不需要重新打包 APK。
 
 - 需要 Android 11（API 30）及以上。小满通过无障碍服务读取屏幕并执行操作。
-- 不支持 iOS：iOS 不允许一个 App 读取或操作其他 App。
+- iOS 无法在手机上单独运行；可用 Mac + WebDriverAgent 的方式试用，见 [docs/ios.md](docs/ios.md)。
+- 可接入 MCP 服务（高德地图、腾讯地图、滴滴、12306 等），查询和下单类的事情可以不操作手机，见 [docs/mcp.md](docs/mcp.md)；安卓 App 在「服务」页一键勾选。
+- iPhone 不装 App 也能用：网页版添加到主屏幕后聊天、勾选 MCP 服务，见 [docs/web.md](docs/web.md)。
 - 模型：任意兼容 OpenAI 接口的服务都可以，例如火山方舟、阿里云百炼、OpenRouter、vLLM、Ollama。
   需要配置两个模型：一个聊天模型，一个能看图的屏幕操作模型。
 
@@ -82,6 +84,10 @@ xiaoman/
 ├── core-sentinel/   # 安全策略：允许 / 询问 / 拒绝 + 审计
 ├── core-agent/      # Agent：聊天编排、操作循环、技能流程、经验沉淀
 ├── hands/           # Android 无障碍层：读屏、点击、输入、悬浮停止按钮
+├── ios-hands/、ios-runner/ # iOS WDA 设备接口 / Mac JVM 命令行（使用说明见 docs/ios.md）
+├── core-mcp/              # MCP 客户端，把外部服务的工具交给聊天模型（见 docs/mcp.md）
+├── mcp/                   # MCP 服务器示例清单 servers.example.json
+├── web-server/            # 网页版：服务端 + 移动端网页（见 docs/web.md）
 ├── app/             # Android App：聊天、技能、记忆、设置界面
 ├── cli/             # 技能开发者 CLI
 ├── skills/examples/ # 示例技能，也会打包进 APK

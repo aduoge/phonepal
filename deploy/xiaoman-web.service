@@ -1,0 +1,39 @@
+# systemd unit for the 小满 web server. install.sh copies it to /etc/systemd/system/xiaoman-web.service.
+# Settings (access code, timezone, JVM memory) live in /etc/xiaoman-web/env, readable by root and the service only.
+[Unit]
+Description=小满网页版 (xiaoman web-server)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=xiaoman
+Group=xiaoman
+EnvironmentFile=/etc/xiaoman-web/env
+# HOME is only used by npx (12306) for its package cache.
+Environment=HOME=/var/lib/xiaoman-web
+StateDirectory=xiaoman-web
+WorkingDirectory=/var/lib/xiaoman-web
+# Listens on localhost only; Caddy terminates HTTPS in front of it.
+# XIAOMAN_WEB_ACCESS_CODE is read from the environment, so it never shows up in `ps`.
+ExecStart=/opt/xiaoman-web/current/bin/web-server --host 127.0.0.1 --port ${XIAOMAN_PORT} --timezone ${XIAOMAN_TZ} --stdio-mcp ${XIAOMAN_STDIO_MCP}
+Restart=on-failure
+RestartSec=3
+# Hardening: the server keeps everything in memory and needs no write access outside its state dir.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadWritePaths=/var/lib/xiaoman-web
+UMask=0077
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target
