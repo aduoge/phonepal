@@ -3,6 +3,7 @@
 # 以服务用户 xiaoman 运行 `web-server tokens`，这样令牌文件始终归服务所有；运行中的服务约 1 秒内生效。
 #   sudo xiaoman-tokens generate 30 --csv > tokens.csv
 #   sudo xiaoman-tokens list | revoke 学员03 | revoke-all | limit --all --daily 300000
+#   sudo xiaoman-tokens claims | reset-claim 论坛用户名   （自助领取记录）
 #   sudo xiaoman-tokens --help
 set -eu
 [ "$(id -u)" -eq 0 ] || exec sudo "$0" "$@"

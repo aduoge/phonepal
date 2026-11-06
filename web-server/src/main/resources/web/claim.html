@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f9f6" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121815" media="(prefers-color-scheme: dark)">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="claim.css">
+  <title>领取小满课堂令牌</title>
+  <script src="claim.js" defer></script>
+</head>
+<body class="claim-body">
+  <header class="app-header"><div class="brand"><img src="icon.svg" width="36" height="36" alt=""><div><strong>小满</strong><span>领取课堂令牌</span></div></div></header>
+  <main class="claim-main">
+    <div id="claim-notice" class="claim-notice" role="alert" hidden></div>
+
+    <section id="step-loading" class="panel"><p class="muted">正在加载…</p></section>
+
+    <section id="step-closed" class="panel" hidden>
+      <h1 id="closed-title">暂时不能领取</h1>
+      <p id="closed-text"></p>
+      <p><a href="/">打开小满网页版</a></p>
+    </section>
+
+    <section id="step-name" class="panel" hidden>
+      <h1>领取课堂令牌</h1>
+      <p>每个 TRAE 论坛账号可以领一份，用来在小满安卓版或网页版里使用讲师提供的模型。</p>
+      <ul class="claim-facts">
+        <li>额度：<strong id="fact-total"></strong> token</li>
+        <li>有效期至：<strong id="fact-expires"></strong></li>
+        <li>剩余份数：<strong id="fact-remaining"></strong></li>
+      </ul>
+      <form id="name-form" class="fields" novalidate>
+        <label>TRAE 论坛用户名<input id="username" name="username" required maxlength="60" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="例如：xiaoman_2026" aria-describedby="username-hint"></label>
+        <p id="username-hint" class="muted">是用户名，不是昵称：在论坛点头像 → 个人资料，网址里 /u/ 后面那一段就是。</p>
+        <button id="name-submit" type="submit" class="primary">下一步：获取验证短语</button>
+      </form>
+    </section>
+
+    <section id="step-phrase" class="panel" hidden>
+      <h1>去领取帖回复这句话</h1>
+      <p>用论坛账号 <strong id="phrase-user"></strong> 在领取帖里回复下面这句话（原样复制即可），证明账号是你的。</p>
+      <div class="phrase-box"><span id="phrase" class="phrase"></span><button id="copy-phrase" type="button">复制短语</button></div>
+      <p class="muted" id="phrase-timer" aria-live="polite"></p>
+      <div class="claim-actions">
+        <a id="topic-link" class="button-link" href="#" target="_blank" rel="noopener noreferrer">打开领取帖 ↗</a>
+        <button id="verify" type="button" class="primary">我已回复，领取令牌</button>
+      </div>
+      <p><button id="restart" type="button" class="inline-link">换一个用户名</button></p>
+    </section>
+
+    <section id="step-done" class="panel" hidden>
+      <h1>领取成功</h1>
+      <p>这是 <strong id="done-user"></strong> 的课堂令牌，<strong>只显示这一次</strong>，请马上复制保存。</p>
+      <div class="phrase-box token-box"><code id="token" class="token"></code><button id="copy-token" type="button">复制令牌</button></div>
+      <p class="claim-warning">截图或分享屏幕时请遮住令牌：别人拿到就能用你的额度。</p>
+      <ul class="claim-facts">
+        <li>额度：<strong id="done-total"></strong> token（每天最多 <span id="done-daily"></span>）</li>
+        <li>有效期至：<strong id="done-expires"></strong></li>
+      </ul>
+      <h2>在本网页版使用</h2>
+      <button id="use-here" type="button" class="primary">一键用于本网页版</button>
+      <h2>在小满安卓版使用</h2>
+      <p class="muted">设置 → 模型，填写：</p>
+      <dl class="android-fields">
+        <dt>Base URL</dt><dd><code id="android-url"></code> <button type="button" class="small" data-copy="android-url">复制</button></dd>
+        <dt>模型名</dt><dd><code id="android-model"></code> <button type="button" class="small" data-copy="android-model">复制</button></dd>
+        <dt>API Key</dt><dd>上面的令牌（xm- 开头）</dd>
+      </dl>
+    </section>
+  </main>
+</body>
+</html>

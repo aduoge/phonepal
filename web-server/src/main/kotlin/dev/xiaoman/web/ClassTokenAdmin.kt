@@ -30,6 +30,9 @@ object ClassTokenAdmin {
   revoke-all                   全部作废（课后执行）
   limit <标签|令牌|前缀|--all> [--daily N|none] [--total N|none] [--days D | --hours H | --expires 时间]
       调整上限或过期时间
+  claims                       列出自助领取记录：论坛账号 → 令牌前缀、状态、用量、领取时间
+  reset-claim <论坛用户名|论坛用户ID>...
+      允许该论坛账号重新领取，同时作废它原来的令牌（只想恢复原令牌用 restore 论坛:用户名）
 通用选项：--file PATH（默认 ${'$'}XIAOMAN_CLASS_TOKENS 或 $DEFAULT_FILE），--timezone Asia/Shanghai
 用量单位是模型 token（输入 + 输出），按方舟返回的 usage 记账；运行中的服务每 5 秒写回一次。"""
 
@@ -102,7 +105,7 @@ object ClassTokenAdmin {
                     val today = store.day()
                     out.println(listOf("标签", "前缀", "状态", "今日/每日上限", "累计/总上限", "请求数", "过期时间", "最近使用").joinToString("\t"))
                     tokens.forEach { t ->
-                        val state = store.check(t)?.let { d -> when (d.code) { "token_revoked" -> "已作废"; "token_expired" -> "已过期"; "total_quota_exceeded" -> "总额度用完"; else -> "今日额度用完" } } ?: "可用"
+                        val state = state(store, t)
                         out.println(listOf(t.label, t.prefix, state, "${t.usedOn(today)}/${amount(t.dailyLimit)}", "${t.usedTotal}/${amount(t.totalLimit)}",
                             t.requests.toString(), time(t.expiresAt, zone), time(t.lastUsedAt, zone)).joinToString("\t"))
                     }
@@ -141,6 +144,36 @@ object ClassTokenAdmin {
                     }
                     changed.forEach { err.println("${it.tag}：每日上限 ${amount(it.dailyLimit)}，总上限 ${amount(it.totalLimit)}，过期 ${time(it.expiresAt, zone)}") }
                 }
+                "claims" -> {
+                    if (rest.isNotEmpty()) throw Usage("claims 不需要参数")
+                    val claimed = store.all().filter { it.claim != null }.sortedBy { it.claim!!.claimedAt }
+                    if (claimed.isEmpty()) { out.println("（还没有人自助领取：$file）"); return 0 }
+                    out.println(listOf("论坛用户名", "论坛ID", "前缀", "状态", "今日/每日上限", "累计/总上限", "请求数", "领取时间", "过期时间").joinToString("\t"))
+                    val today = store.day()
+                    claimed.forEach { t ->
+                        val c = t.claim!!
+                        out.println(listOf(c.username, c.userId.toString(), t.prefix, if (c.reset) "已重置" else state(store, t),
+                            "${t.usedOn(today)}/${amount(t.dailyLimit)}", "${t.usedTotal}/${amount(t.totalLimit)}", t.requests.toString(),
+                            time(c.claimedAt, zone), time(t.expiresAt, zone)).joinToString("\t"))
+                    }
+                    val active = ClaimService.activeClaims(claimed)
+                    out.println("已领取 ${active.size} 份（另有 ${claimed.size - active.size} 条已重置），其中可用 ${active.count { store.check(it) == null }} 份，" +
+                        "累计用量 ${claimed.sumOf { it.usedTotal }} token")
+                }
+                "reset-claim" -> {
+                    if (rest.isEmpty()) throw Usage("reset-claim 需要论坛用户名或论坛用户 ID")
+                    val changed = mutableListOf<ClassToken>()
+                    store.update { list ->
+                        val active = ClaimService.activeClaims(list)
+                        val targets = rest.flatMap { sel ->
+                            val key = sel.trim().removePrefix(ClaimService.LABEL).removePrefix("@")
+                            active.filter { it.claim!!.username.equals(key, ignoreCase = true) || it.claim.userId.toString() == key }
+                                .ifEmpty { throw IllegalArgumentException("找不到「$key」的有效领取记录（claims 查看）") }
+                        }.map { it.hash }.toSet()
+                        list.map { t -> if (t.hash !in targets) t else t.copy(revoked = true, claim = t.claim!!.copy(reset = true)).also { changed += it } }
+                    }
+                    changed.forEach { err.println("已重置 ${it.tag}：原令牌已作废，该论坛账号可以重新领取") }
+                }
                 else -> throw Usage("未知命令 $command")
             }
             0
@@ -154,6 +187,10 @@ object ClassTokenAdmin {
             err.println("错误：读写令牌文件失败（${e.javaClass.simpleName}）"); 1
         }
     }
+
+    private fun state(store: ClassTokenStore, t: ClassToken) = store.check(t)?.let { d ->
+        when (d.code) { "token_revoked" -> "已作废"; "token_expired" -> "已过期"; "total_quota_exceeded" -> "总额度用完"; else -> "今日额度用完" }
+    } ?: "可用"
 
     /** Marker for "option not given" (distinct from `none`, which means unlimited). */
     private object Unset

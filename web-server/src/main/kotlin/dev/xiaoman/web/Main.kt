@@ -24,7 +24,12 @@ fun main(args: Array<String>) {
 课堂令牌（默认关闭）：设置 XIAOMAN_CLASS_UPSTREAM_KEY_FILE（或 XIAOMAN_CLASS_UPSTREAM_KEY）和
   XIAOMAN_CLASS_MODELS（如 xiaoman-class=doubao-seed-1-6-250615），并用 web-server tokens generate 生成令牌文件后开启；
   可选 XIAOMAN_CLASS_UPSTREAM_URL、XIAOMAN_CLASS_TOKENS、XIAOMAN_CLASS_WEB_MODEL、XIAOMAN_CLASS_TOKEN_RPM、
-  XIAOMAN_CLASS_TOKEN_CONCURRENCY、XIAOMAN_CLASS_MAX_CONCURRENT、XIAOMAN_CLASS_MAX_BODY_MB、XIAOMAN_CLASS_TIMEOUT_SECONDS。""")
+  XIAOMAN_CLASS_TOKEN_CONCURRENCY、XIAOMAN_CLASS_MAX_CONCURRENT、XIAOMAN_CLASS_MAX_BODY_MB、XIAOMAN_CLASS_TIMEOUT_SECONDS。
+自助领取（默认关闭，需要先开启课堂令牌）：学员打开 /claim，在论坛领取帖回复验证短语后领到令牌，每个论坛账号一份。
+  XIAOMAN_CLAIM_TOPIC_ID（帖子编号或链接）和 XIAOMAN_CLAIM_EXPIRES（统一过期时间，如 2026-11-12 21:00，按 --timezone）必填；
+  可选 XIAOMAN_CLAIM_MAX（默认 50 份）、XIAOMAN_CLAIM_TOTAL_TOKENS（每份总额度，默认 1000000）、
+  XIAOMAN_CLAIM_DAILY_TOKENS（每日上限，默认同总额度）、XIAOMAN_CLAIM_FORUM（默认 https://forum.trae.cn）、
+  XIAOMAN_CLAIM_MIN_CREATED_BEFORE（只限此日期前注册的账号）、XIAOMAN_CLAIM_MIN_TRUST（最低信任等级 0-4，默认 0）。""")
         return
     }
     try {
@@ -59,6 +64,10 @@ fun main(args: Array<String>) {
             System.err.println("课堂令牌配置无效：${e.message}"); throw e
         } catch (e: IllegalStateException) { System.err.println("课堂令牌配置无效：${e.message}"); throw e }
         options = options.copy(classConfig = classConfig)
+        val (claimConfig, claimStatus) = try { ClaimConfig.fromEnv(System.getenv(), options.timezone) } catch (e: IllegalArgumentException) {
+            System.err.println("自助领取配置无效：${e.message}"); throw e
+        }
+        if (classConfig != null) options = options.copy(claimConfig = claimConfig)
         if (local) options = options.copy(localConnect = true, accessCode = options.accessCode ?: LocalLaunch.accessCode())
         // Core reminder parsing uses the process timezone.
         TimeZone.setDefault(TimeZone.getTimeZone(options.timezone))
@@ -75,6 +84,12 @@ fun main(args: Array<String>) {
             val tokens = ClassTokenStore(classConfig.tokensFile, options.timezone).takeIf { it.exists() }?.all()
             "课堂令牌：上游 ${classConfig.upstreamUrl}，模型 ${classConfig.models.keys.joinToString("、")}，" +
                 (tokens?.let { "令牌文件 ${classConfig.tokensFile}（${it.size} 个）" } ?: "令牌文件 ${classConfig.tokensFile} 还不存在，生成令牌后自动开启")
+        })
+        println(when {
+            claimConfig == null -> "自助领取：未开启（$claimStatus）"
+            classConfig == null -> "自助领取：未开启（需要先开启课堂令牌）"
+            else -> "自助领取：$claimStatus，领取帖 ${claimConfig.topicUrl}，最多 ${claimConfig.max} 份，每份 ${claimConfig.totalTokens} token，" +
+                "过期 ${java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm").format(java.time.Instant.ofEpochMilli(claimConfig.expiresAt).atZone(options.timezone))}，页面 /claim"
         })
         if (local) {
             if (server.port != options.port) println("端口 ${options.port} 已被占用，改用 ${server.port}")

@@ -25,19 +25,32 @@
 #   --class-off           关闭课堂令牌（删除服务器上的 Key 文件和相关设置）
 #   不给这些参数时沿用服务器上原来的课堂令牌设置。Key 存在服务器 /etc/xiaoman-web/class-upstream.key（0640）。
 #
+#   自助领取（可选，需要课堂令牌已开启；学员打开 https://<网址>/claim，在论坛帖回复验证短语后领令牌）：
+#   --claim-topic ID      领取帖编号（帖子链接 /t/标题/465300 里的数字）
+#   --claim-expires T     统一过期时间，如 "2026-11-12 21:00"（按 --timezone）
+#   --claim-max N         最多发放份数，默认 50
+#   --claim-total N       每份总额度（模型 token），默认 1000000
+#   --claim-daily N       每份每日上限，默认同总额度
+#   --claim-forum URL     论坛地址，默认 https://forum.trae.cn
+#   --claim-created-before D  只限此日期前注册的论坛账号，如 2026-11-01（none 取消）
+#   --claim-min-trust N   最低论坛信任等级 0-4，默认 0
+#   --claim-off           关闭自助领取（已发的令牌不受影响）
+#   不给时沿用服务器上原来的设置。
+#
 #   -h, --help            显示本帮助
 #
 # 再次运行即为“更新”：上传新版本到 /opt/xiaoman-web/releases/<时间>，切换 current 链接并重启，
 # 旧版本保留，可用 deploy/rollback.sh 回滚。访问码、时区保存在服务器 /etc/xiaoman-web/env。
 set -euo pipefail
 
-usage() { sed -n '2,35p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,43p' "$0" | sed 's/^# \{0,1\}//'; }
 die() { echo "错误：$*" >&2; exit 1; }
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 target="" domain="" sslip=false sslip_ip="" access_code="" timezone="Asia/Shanghai" port=8787
 with_node=false install_deps=false dist="" skip_build=false
 class_models="" class_key_file="" class_key_stdin=false class_url="" class_web_model="" class_off=false
+claim_topic="" claim_expires="" claim_max="" claim_total="" claim_daily="" claim_forum="" claim_before="" claim_trust="" claim_off=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -57,6 +70,15 @@ while [[ $# -gt 0 ]]; do
     --class-upstream-url) class_url="${2:?--class-upstream-url 需要值}"; shift 2 ;;
     --class-web-model) class_web_model="${2:?--class-web-model 需要值}"; shift 2 ;;
     --class-off) class_off=true; shift ;;
+    --claim-topic) claim_topic="${2:?--claim-topic 需要帖子编号}"; shift 2 ;;
+    --claim-expires) claim_expires="${2:?--claim-expires 需要时间}"; shift 2 ;;
+    --claim-max) claim_max="${2:?--claim-max 需要数字}"; shift 2 ;;
+    --claim-total) claim_total="${2:?--claim-total 需要数字}"; shift 2 ;;
+    --claim-daily) claim_daily="${2:?--claim-daily 需要数字}"; shift 2 ;;
+    --claim-forum) claim_forum="${2:?--claim-forum 需要地址}"; shift 2 ;;
+    --claim-created-before) claim_before="${2:?--claim-created-before 需要日期}"; shift 2 ;;
+    --claim-min-trust) claim_trust="${2:?--claim-min-trust 需要 0-4}"; shift 2 ;;
+    --claim-off) claim_off=true; shift ;;
     -*) die "未知参数 $1（--help 查看用法）" ;;
     *) [[ -z "$target" ]] || die "只能指定一个 ssh 目标"; target="$1"; shift ;;
   esac
@@ -77,6 +99,17 @@ fi
 [[ -z "$class_web_model" || "$class_web_model" =~ ^[A-Za-z0-9._:/-]+$ ]] || die "--class-web-model 格式无效"
 [[ -z "$class_key_file" || "$class_key_stdin" == false ]] || die "--class-key-file 和 --class-key-stdin 只能选一个"
 [[ "$class_off" == false || ( -z "$class_models$class_key_file$class_url$class_web_model" && "$class_key_stdin" == false ) ]] || die "--class-off 不能和其他 --class-* 一起用"
+
+# 自助领取：时间里的空格换成 T，环境文件里不出现空格。
+time_re='^[0-9]{4}-[0-9]{2}-[0-9]{2}([ T][0-9]{2}:[0-9]{2}(:[0-9]{2})?)?([+-][0-9]{2}:[0-9]{2})?$'
+[[ -z "$claim_topic" || "$claim_topic" =~ ^[0-9]{1,12}$ ]] || die "--claim-topic 需要帖子编号（数字）"
+[[ -z "$claim_expires" || "$claim_expires" =~ $time_re ]] || die "--claim-expires 格式：\"2026-11-12 21:00\""
+[[ -z "$claim_before" || "$claim_before" == none || "$claim_before" =~ $time_re ]] || die "--claim-created-before 格式：2026-11-01"
+claim_expires="${claim_expires/ /T}" claim_before="${claim_before/ /T}"
+for n in "$claim_max" "$claim_total" "$claim_daily"; do [[ -z "$n" || "$n" =~ ^[1-9][0-9]{0,11}$ ]] || die "--claim-max/--claim-total/--claim-daily 需要正整数：$n"; done
+[[ -z "$claim_trust" || "$claim_trust" =~ ^[0-4]$ ]] || die "--claim-min-trust 需要 0-4"
+[[ -z "$claim_forum" || "$claim_forum" =~ ^https?://[A-Za-z0-9.:/_-]+$ ]] || die "--claim-forum 无效：$claim_forum"
+[[ "$claim_off" == false || -z "$claim_topic$claim_expires$claim_max$claim_total$claim_daily$claim_forum$claim_before$claim_trust" ]] || die "--claim-off 不能和其他 --claim-* 一起用"
 
 # 讲师的方舟 Key：只从文件或标准输入读，经 scp 传到服务器，不出现在命令行、ps 和日志里。
 class_key=""
@@ -145,6 +178,8 @@ cp "$here/deploy/xiaoman-web.service" "$here/deploy/Caddyfile.template" "$work/b
     "$release" "$site" "$port" "$timezone" "$with_node" "$install_deps"
   printf 'NEW_ACCESS_CODE=%q\n' "$access_code"
   printf 'CLASS_MODELS=%q\nCLASS_URL=%q\nCLASS_WEB_MODEL=%q\nCLASS_OFF=%q\n' "$class_models" "$class_url" "$class_web_model" "$class_off"
+  printf 'CLAIM_TOPIC_ID=%q\nCLAIM_EXPIRES=%q\nCLAIM_MAX=%q\nCLAIM_TOTAL_TOKENS=%q\nCLAIM_DAILY_TOKENS=%q\nCLAIM_FORUM=%q\nCLAIM_MIN_CREATED_BEFORE=%q\nCLAIM_MIN_TRUST=%q\nCLAIM_OFF=%q\n' \
+    "$claim_topic" "$claim_expires" "$claim_max" "$claim_total" "$claim_daily" "$claim_forum" "$claim_before" "$claim_trust" "$claim_off"
 } > "$work/bundle/settings"
 if [[ -n "$class_key" ]]; then printf '%s\n' "$class_key" > "$work/bundle/class.key"; fi
 cp "$here/deploy/xiaoman-tokens" "$work/bundle/"
@@ -231,6 +266,18 @@ if [[ -n "$class_models" && -f "$key_file" ]]; then class_state=on
 elif [[ -n "$class_models" ]]; then say "已设置课堂模型白名单，但服务器上还没有方舟 Key（用 --class-key-file 或 --class-key-stdin 上传），课堂令牌保持关闭"
 elif [[ -f "$key_file" ]]; then say "服务器上有方舟 Key，但没有模型白名单（--class-models），课堂令牌保持关闭"
 fi
+# 自助领取：每一项新给的优先，否则沿用旧值；--claim-off 全部去掉；created-before 给 none 时去掉这一项。
+claim_lines=""
+if [[ "$CLAIM_OFF" != true ]]; then
+  for name in TOPIC_ID EXPIRES MAX TOTAL_TOKENS DAILY_TOKENS FORUM MIN_CREATED_BEFORE MIN_TRUST; do
+    new="CLAIM_$name"; v="${!new:-$(old_value "XIAOMAN_CLAIM_$name")}"
+    [[ "$name" == MIN_CREATED_BEFORE && "$v" == none ]] && v=""
+    [[ -n "$v" ]] && claim_lines+="XIAOMAN_CLAIM_$name=$v"$'\n'
+  done
+fi
+if [[ -n "$claim_lines" ]] && ! grep -q '^XIAOMAN_CLAIM_TOPIC_ID=' <<<"$claim_lines"; then say "自助领取缺领取帖（--claim-topic），保持关闭"; claim_lines=""; fi
+if [[ -n "$claim_lines" ]] && ! grep -q '^XIAOMAN_CLAIM_EXPIRES=' <<<"$claim_lines"; then say "自助领取缺过期时间（--claim-expires），保持关闭"; claim_lines=""; fi
+if [[ -n "$claim_lines" && "$class_state" != on ]]; then say "自助领取需要先开启课堂令牌，设置已保留但暂不生效"; fi
 generated=false
 if [[ -z "$code" ]]; then code="$(head -c 18 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 12)"; generated=true; fi
 umask 027
@@ -254,6 +301,9 @@ if [[ "$class_state" == on ]]; then
     [[ -n "$class_tuning" ]] && printf '%s\n' "$class_tuning"
     true
   } >> "$env_file.new"
+fi
+if [[ -n "$claim_lines" ]]; then
+  { echo "# 自助领取（/claim）：学员在论坛领取帖回复验证短语领令牌；sudo xiaoman-tokens claims 查看"; printf '%s' "$claim_lines"; } >> "$env_file.new"
 fi
 chgrp xiaoman "$env_file.new"; chmod 0640 "$env_file.new"; mv "$env_file.new" "$env_file"
 
@@ -296,7 +346,7 @@ for _ in $(seq 1 30); do
 done
 curl -fsS --max-time 3 "http://127.0.0.1:$PORT/api/info" >/dev/null || { journalctl -u xiaoman-web -n 30 --no-pager; exit 3; }
 say "web-server 已在 127.0.0.1:$PORT 运行（版本目录 $dest）"
-journalctl -u xiaoman-web -n 5 --no-pager -o cat | grep -F -e '12306' -e '课堂令牌' || true
+journalctl -u xiaoman-web -n 6 --no-pager -o cat | grep -F -e '12306' -e '课堂令牌' -e '自助领取' || true
 if [[ "$generated" == true ]]; then echo "ACCESS_CODE_GENERATED=$code"; fi
 REMOTE
 chmod +x "$work/bundle/remote.sh"

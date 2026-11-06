@@ -41,6 +41,8 @@ iPhone 不允许一个 App 操作其他 App，没有付费开发者账号也发�
 
 开启方式（默认关闭）：配置 `XIAOMAN_CLASS_UPSTREAM_KEY_FILE`（或 `XIAOMAN_CLASS_UPSTREAM_KEY`）、`XIAOMAN_CLASS_MODELS`（如 `xiaoman-class=doubao-seed-1-6-250615`），可选 `XIAOMAN_CLASS_UPSTREAM_URL`（默认方舟北京），然后用 `web-server tokens generate N` 生成令牌文件（`--class-tokens` 或 `XIAOMAN_CLASS_TOKENS` 指定路径，默认 `/var/lib/xiaoman-web/class-tokens.json`）。令牌管理、课前课后操作见 [deploy/README.md](../deploy/README.md#课堂令牌讲师-key-兜底)。
 
+学员也可以自助领取：讲师在 TRAE 论坛发领取帖并配置 `XIAOMAN_CLAIM_TOPIC_ID`、`XIAOMAN_CLAIM_EXPIRES` 后，学员打开 `/claim` 填论坛用户名，在帖子里回复页面给的验证短语，就能领到一份令牌（每个论坛账号一份，统一过期，默认最多 50 份、每份 100 万 token），领取页可以「一键用于本网页版」。讲师的课前步骤和管理命令见 [deploy/README.md](../deploy/README.md#自助领取按-trae-论坛账号每人一份)。
+
 课堂请求默认关闭豆包深度思考（`XIAOMAN_CLASS_THINKING=disabled`）：思考内容按输出价计费，关掉后同样的任务输出 Token 少一半以上。可设 `enabled`、`auto`，或 `keep` 原样转发；请求里自带 `thinking` 时以请求为准。
 
 ## 部署
@@ -76,7 +78,7 @@ XIAOMAN_WEB_ACCESS_CODE=课堂口令 web-server/build/install/web-server/bin/web
 
 ## 接口
 
-前端与服务器同源，接口定义在 `web-server/src/main/resources/web/app.js` 顶部注释里：`/api/info`（含 `classTokens`）、`/api/catalog`、`/api/session`、`/api/chat`（SSE 事件流，请求里带 `memory.notes`；课堂模式 `model` 为 `{classToken}`）、`/api/answer`、`/api/mcp/test`。服务器端的记忆格式见 `web-server/src/main/kotlin/dev/xiaoman/web/BrowserMemory.kt`。课堂令牌见 `ClassGateway.kt`（`/v1` 转发、限流、记账）、`ClassTokens.kt`（令牌文件）、`ClassTokenAdmin.kt`（`web-server tokens` 命令）。
+前端与服务器同源，接口定义在 `web-server/src/main/resources/web/app.js` 顶部注释里：`/api/info`（含 `classTokens`）、`/api/catalog`、`/api/session`、`/api/chat`（SSE 事件流，请求里带 `memory.notes`；课堂模式 `model` 为 `{classToken}`）、`/api/answer`、`/api/mcp/test`，以及领取页用的 `/api/claim/start`、`/api/claim/verify`（不需要访问码，有限流；定义见 `claim.js` 顶部）。服务器端的记忆格式见 `web-server/src/main/kotlin/dev/xiaoman/web/BrowserMemory.kt`。课堂令牌见 `ClassGateway.kt`（`/v1` 转发、限流、记账）、`ClassTokens.kt`（令牌文件）、`ClassTokenAdmin.kt`（`web-server tokens` 命令），自助领取见 `ForumClaims.kt`（论坛读取、验证短语、发放）。
 
 ## 测试
 

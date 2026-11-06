@@ -48,6 +48,8 @@ class WebServer(
         val classConfig: ClassConfig? = null,
         /** Serves the loopback-only `/connect` page of [LocalLaunch] (`--local`). */
         val localConnect: Boolean = false,
+        /** Self-service tokens via the forum ([ClaimService], `/claim`); needs [classConfig]. */
+        val claimConfig: ClaimConfig? = null,
     ) {
         init { require(sessionMillis > 0 && maxSessions > 0 && chatTimeoutMillis > 0 && heartbeatMillis > 0 && maxStdioProcesses > 0) }
     }
@@ -58,6 +60,8 @@ class WebServer(
     private val llm = llm ?: LlmClients.factory(http = http)
     private val stdio = stdio ?: StdioMcp(options.stdioMcp, options.maxStdioProcesses)
     private val gateway = options.classConfig?.let { ClassGateway(it, options.timezone, clock, logger) }
+    private val claims = if (gateway != null && options.claimConfig != null)
+        ClaimService(options.claimConfig, gateway.store, options.timezone, http, clock, logger, gateway.config.webModelName) else null
     private val transports: (McpServerConfig) -> McpTransport = { if (it.url != null) McpHttpTransport(it, http) else this.stdio.transport(it) }
     // DNS filtering applies to direct connections. An HTTP proxy may resolve destinations itself.
     private val server = HttpServer.create(InetSocketAddress(options.host, options.port), 0).apply {
@@ -98,10 +102,11 @@ class WebServer(
         if (path.startsWith("/v1/") && gateway?.active == true) return gateway.handle(x)
         try {
             if (path.startsWith("/api/")) {
-                if (path != "/api/info" && !authorized(x)) throw Problem(401, "需要访问码")
+                // The claim page is for students who have no access code yet; it is rate-limited instead.
+                if (path != "/api/info" && !path.startsWith("/api/claim/") && !authorized(x)) throw Problem(401, "需要访问码")
                 api(x, path)
             } else if (options.localConnect && LocalLaunch.isConnectPath(path)) LocalLaunch.serve(x, path, port, options.accessCode, stdio.enabled)
-            else static(x, path)
+            else static(x, if (path == "/claim" || path == "/claim/") "/claim.html" else path)
         } catch (p: Problem) { if (x.responseCode == -1) json(x, p.status, buildJsonObject { put("error", p.message) })
         } catch (_: Exception) { if (x.responseCode == -1) runCatching { json(x, 500, buildJsonObject { put("error", "请求处理失败") }) }
         } finally {
@@ -115,6 +120,12 @@ class WebServer(
         val code = options.accessCode?.takeIf { it.isNotEmpty() } ?: return true
         return MessageDigest.isEqual(code.toByteArray(), x.requestHeaders.getFirst("X-Xiaoman-Access").orEmpty().toByteArray())
     }
+    /** Behind Caddy (a loopback peer) the client is the last X-Forwarded-For entry, which Caddy sets itself. */
+    private fun clientIp(x: HttpExchange): String {
+        val peer = x.remoteAddress.address
+        if (!peer.isLoopbackAddress) return peer.hostAddress
+        return x.requestHeaders.getFirst("X-Forwarded-For")?.split(',')?.last()?.trim()?.takeIf { it.isNotEmpty() && it.length <= 64 } ?: peer.hostAddress
+    }
     private fun api(x: HttpExchange, path: String) {
         val method = if (path in setOf("/api/info", "/api/catalog")) "GET" else "POST"
         if (path !in API_PATHS) throw Problem(404, "接口不存在")
@@ -123,7 +134,17 @@ class WebServer(
             "/api/info" -> json(x, 200, buildJsonObject {
                 put("name", "Xiaoman"); put("version", "1.1"); put("accessCodeRequired", !options.accessCode.isNullOrEmpty())
                 put("stdioMcp", stdio.enabled); put("memory", "browser"); put("classTokens", gateway?.active == true)
+                put("claim", claims?.info() ?: buildJsonObject { put("state", "off") })
             })
+            "/api/claim/start", "/api/claim/verify" -> {
+                val service = claims ?: throw Problem(404, "自助领取没有开启")
+                val body = body(x)
+                val ip = clientIp(x)
+                val reply = if (path == "/api/claim/start") service.start(ip, body) else service.verify(ip, body)
+                reply.retryAfter?.let { x.responseHeaders.set("Retry-After", it.toString()) }
+                x.responseHeaders.set("Cache-Control", "no-store")
+                json(x, reply.status, reply.body)
+            }
             "/api/catalog" -> json(x, 200, buildJsonObject {
                 put("servers", JsonArray(webCatalog()))
             })
@@ -328,5 +349,6 @@ class WebServer(
         gateway?.close()
         http.dispatcher.executorService.shutdownNow(); http.connectionPool.evictAll()
     }
-    companion object { private val API_PATHS = setOf("/api/info", "/api/catalog", "/api/session", "/api/chat", "/api/answer", "/api/mcp/test") }
+    companion object { private val API_PATHS = setOf("/api/info", "/api/catalog", "/api/session", "/api/chat", "/api/answer", "/api/mcp/test",
+        "/api/claim/start", "/api/claim/verify") }
 }

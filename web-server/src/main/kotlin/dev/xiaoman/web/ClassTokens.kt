@@ -26,10 +26,18 @@ data class ClassToken(
     val dailyLimit: Long?, val totalLimit: Long?,
     val usedTotal: Long = 0, val usedToday: Long = 0, val usageDay: String = "",
     val requests: Long = 0, val lastUsedAt: Long? = null,
+    /** Set for tokens students claimed themselves with a forum account ([ClaimService]). */
+    val claim: ForumClaim? = null,
 ) {
     fun usedOn(day: String) = if (usageDay == day) usedToday else 0
     val tag get() = "$label($prefix)"
 }
+
+/**
+ * Which forum account claimed a token. [reset] marks a claim the instructor released with `tokens reset-claim`:
+ * it no longer blocks that account from claiming again (its token is revoked at the same time).
+ */
+data class ForumClaim(val userId: Long, val username: String, val claimedAt: Long, val reset: Boolean = false)
 
 /** Why a token may not be used right now, as an OpenAI-style error. */
 class ClassDenied(val status: Int, val code: String, val message: String, val retryAfterSeconds: Long? = null)
@@ -57,6 +65,9 @@ object ClassTokenCodec {
                 put("dailyLimit", t.dailyLimit); put("totalLimit", t.totalLimit)
                 put("usedToday", t.usedToday); put("usageDay", t.usageDay); put("usedTotal", t.usedTotal)
                 put("requests", t.requests); put("lastUsedAt", time(t.lastUsedAt))
+                t.claim?.let { c -> put("claim", buildJsonObject {
+                    put("forumUserId", c.userId); put("forumUsername", c.username); put("claimedAt", time(c.claimedAt)); put("reset", c.reset)
+                }) }
             } }))
         }
         return prettyJson.encodeToString(JsonObject.serializer(), root) + "\n"
@@ -71,7 +82,11 @@ object ClassTokenCodec {
             require(hash.matches(Regex("[0-9a-f]{64}"))) { "令牌文件里有无效的哈希" }
             ClassToken(hash, o.str("prefix"), o.str("label"), o.time("createdAt") ?: 0, o.time("expiresAt"),
                 (o["revoked"] as? JsonPrimitive)?.booleanOrNull == true, o.long("dailyLimit"), o.long("totalLimit"),
-                o.long("usedTotal") ?: 0, o.long("usedToday") ?: 0, o.str("usageDay"), o.long("requests") ?: 0, o.time("lastUsedAt"))
+                o.long("usedTotal") ?: 0, o.long("usedToday") ?: 0, o.str("usageDay"), o.long("requests") ?: 0, o.time("lastUsedAt"),
+                (o["claim"] as? JsonObject)?.let { c ->
+                    ForumClaim(requireNotNull(c.long("forumUserId")) { "令牌文件里有无效的领取记录" }, c.str("forumUsername"),
+                        c.time("claimedAt") ?: 0, (c["reset"] as? JsonPrimitive)?.booleanOrNull == true)
+                })
         }
     }
     @OptIn(kotlinx.serialization.ExperimentalSerializationApi::class)

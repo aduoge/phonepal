@@ -738,6 +738,11 @@ if (typeof document !== 'undefined') {
     fillModel(); renderCustom(); renderMemory(); updateCount();
     history.forEach(row => $('messages').append(renderRecord(row)));
     saveHistory(); updateChat(); scrollChat(); boot();
+    // Coming from /claim's "一键用于本网页版": the token is already saved, show where it went.
+    if (location.hash === '#claimed') {
+      window.history.replaceState(null, '', location.pathname + location.search);
+      showTab('settings'); notify('已填入领到的课堂令牌，可以去聊天了。');
+    }
   })();
 }
 

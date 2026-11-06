@@ -1,0 +1,21 @@
+/* The /claim page: a plain scrolling page on top of style.css (which locks the body for the chat layout). */
+body.claim-body { height: auto; min-height: 100vh; min-height: 100dvh; overflow: auto; }
+.claim-main { flex: none; max-width: 560px; padding: 18px max(16px, env(safe-area-inset-left, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)); }
+.claim-main h1 { font-size: 23px; }
+.claim-main h2 { font-size: 17px; margin: 22px 0 10px; }
+.claim-facts { list-style: none; padding: 12px 14px; margin: 12px 0 18px; border-radius: 12px; background: var(--surface-low); line-height: 1.9; font-size: 15px; }
+.claim-notice { margin: 0 0 14px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); line-height: 1.6; }
+.claim-notice.error { border-color: var(--danger); color: var(--danger); }
+.claim-notice.info { border-color: var(--primary); color: var(--on-primary-soft); background: var(--primary-soft); }
+.phrase-box { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 14px; margin: 14px 0 6px; border-radius: 14px; border: 2px dashed var(--primary); background: var(--primary-soft); }
+.phrase { flex: 1 1 200px; font-size: 22px; font-weight: 700; letter-spacing: 1px; color: var(--on-primary-soft); user-select: all; -webkit-user-select: all; overflow-wrap: anywhere; }
+.token { flex: 1 1 220px; font-size: 18px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--on-primary-soft); user-select: all; -webkit-user-select: all; overflow-wrap: anywhere; }
+.claim-actions { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0 4px; }
+.claim-actions > * { flex: 1 1 200px; }
+.button-link { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 10px 15px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--text); text-decoration: none; font-weight: 600; }
+.claim-warning { padding: 10px 12px; border-radius: 10px; background: var(--surface-low); color: var(--warning); font-size: 14px; }
+.android-fields { display: grid; grid-template-columns: auto 1fr; gap: 10px 12px; align-items: center; margin: 0; font-size: 15px; }
+.android-fields dt { color: var(--muted); }
+.android-fields dd { margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.android-fields code { overflow-wrap: anywhere; }
+button.small { min-height: 34px; padding: 4px 10px; font-size: 14px; }

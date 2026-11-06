@@ -120,6 +120,40 @@ deploy/install.sh ubuntu@203.0.113.10 --sslip --class-off   # 可选：彻底关
 
 之后建议在方舟控制台删除或轮换这把 Key。
 
+### 自助领取（按 TRAE 论坛账号，每人一份）
+
+不想逐个私发令牌时，可以让学员自己领：打开 `https://<网址>/claim`（不需要访问码），填 TRAE 论坛用户名 → 页面给出一句一次性验证短语（如「领取小满令牌 K7Q3M2」，10 分钟有效）→ 学员用这个账号在领取帖里回复这句话 → 点「我已回复」，服务器只读论坛公开接口找到这条回复后当场生成令牌，显示一次。同一论坛账号（按论坛用户 ID 认，用户名大小写不敏感）只能领一份；被作废的不会补发。领取页还给出安卓填写方法，并能「一键用于本网页版」（写入网页版的课堂令牌模式）。
+
+需要先开启上面的课堂令牌。课前步骤：
+
+1. 在论坛发一个领取帖，写明「打开 https://<网址>/claim，按页面提示回复验证短语」。记下帖子编号（链接 `/t/标题/465300` 里的数字）。帖子要公开可见（未登录也能打开）。
+2. 配置并重启（再次安装会保留这些设置）：
+
+   ```bash
+   deploy/install.sh ubuntu@203.0.113.10 --sslip --claim-topic 465300 --claim-expires "2026-11-12 21:00"
+   # 可选：--claim-max 50 --claim-total 1000000 --claim-daily 1000000
+   #       --claim-created-before 2026-11-01（只限这天前注册的账号） --claim-min-trust 1（最低信任等级）
+   ```
+
+   对应 `/etc/xiaoman-web/env` 里的 `XIAOMAN_CLAIM_TOPIC_ID`、`XIAOMAN_CLAIM_EXPIRES`（按 `XIAOMAN_TZ`）、`XIAOMAN_CLAIM_MAX`（默认 50）、`XIAOMAN_CLAIM_TOTAL_TOKENS`（每份总额度，默认 1000000）、`XIAOMAN_CLAIM_DAILY_TOKENS`（默认同总额度）、`XIAOMAN_CLAIM_FORUM`（默认 `https://forum.trae.cn`）、`XIAOMAN_CLAIM_MIN_CREATED_BEFORE`、`XIAOMAN_CLAIM_MIN_TRUST`（默认 0）。启动日志有一行「自助领取：…」，`/api/info` 的 `claim.state` 为 `open`/`full`/`expired`/`off`。
+3. 用自己的论坛账号走一遍领取，确认能拿到令牌并聊天，然后 `sudo xiaoman-tokens reset-claim 你的用户名` 把这份收回（或留着自己用）。
+
+课上与课后：
+
+```bash
+sudo xiaoman-tokens claims                  # 论坛账号 → 令牌前缀、状态、用量、领取时间；末行是已领份数
+sudo xiaoman-tokens revoke 论坛:某某         # 作废某人的令牌（不会补发）；restore 论坛:某某 恢复
+sudo xiaoman-tokens reset-claim 某某         # 学员丢了令牌：作废旧令牌并允许该账号重新领
+sudo xiaoman-tokens limit --all --expires "2026-11-13 21:00"   # 统一延期（领到的令牌也在内；新领的仍按 XIAOMAN_CLAIM_EXPIRES）
+sudo xiaoman-tokens revoke-all              # 课后统一作废
+deploy/install.sh ubuntu@203.0.113.10 --sslip --claim-off       # 关闭领取页（已发的令牌不受影响）
+```
+
+- 份数满了、到了过期时间或功能关闭时，领取页直接显示对应提示；重置会腾出一份名额。
+- 防刷：每个 IP 每分钟最多获取 5 次短语、核对 20 次，全站每分钟各 120 次；用户名先做格式校验再访问论坛；论坛请求 10 秒超时，论坛不可达时提示稍后重试，不发令牌。每次核对最多读帖子最新 300 条回复。
+- 刚回复可能要等几秒才能被读到；新账号的回复如果进了论坛审核队列，要等审核通过。
+- 日志只记「自助领取 论坛:用户名(xm-xxx) 已发放」，不记完整令牌；令牌标签就是「论坛:用户名」。
+
 ### 安全
 
 - 服务器不记录请求和回复内容；日志每次请求一行：接口、状态码、耗时、令牌标签和前 6 位（如 `学员 01(xm-7k3)`）、token 用量。上游 Key 不出现在响应和日志里，上游错误信息会过滤掉 Key。

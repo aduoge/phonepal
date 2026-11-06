@@ -78,3 +78,22 @@ test('model settings keep own-key and class-token modes apart', () => {
   assert.equal(app.cleanModel(null, url).baseUrl, url);
   assert.equal(app.cleanModel({mode: 'weird'}, url).mode, 'own');
 });
+
+const claim = require(path.join(__dirname, '../../main/resources/web/claim.js'));
+
+test('a claimed token switches saved settings to class mode and keeps own-key fields', () => {
+  const saved = {mode: 'own', baseUrl: 'https://ark.example/api/v3', model: 'm', apiKey: 'k', classToken: 'xm-old'};
+  const next = claim.withClassToken(saved, 'xm-new');
+  assert.deepEqual(next, {...saved, mode: 'class', classToken: 'xm-new'});
+  assert.equal(saved.mode, 'own', 'input is not mutated');
+  const fresh = app.cleanModel(claim.withClassToken(null, 'xm-abc'), 'https://default');
+  assert.equal(fresh.mode, 'class'); assert.equal(fresh.classToken, 'xm-abc');
+  assert.ok(app.modelReady(fresh, true));
+  assert.deepEqual(claim.withClassToken([1], 'xm-a'), {mode: 'class', classToken: 'xm-a'});
+});
+
+test('token amounts read as 万 when round', () => {
+  assert.equal(claim.amountText(1000000), '100 万');
+  assert.equal(claim.amountText(12345), '12345');
+  assert.equal(claim.amountText(undefined), '-');
+});
