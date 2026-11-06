@@ -44,14 +44,20 @@ class StdioMcp(val enabled: Boolean, private val maxProcesses: Int = 20,
             "PATH", "HOME", "LANG", "LC_ALL", "TZ", "TMPDIR", "USER",
             "HTTP_PROXY", "HTTPS_PROXY", "NO_PROXY", "http_proxy", "https_proxy", "no_proxy",
             "NODE_EXTRA_CA_CERTS", "npm_config_cache", "npm_config_registry", "NPM_CONFIG_CACHE", "NPM_CONFIG_REGISTRY",
+            // Windows: npx needs these to find cmd.exe, its cache and the user profile.
+            "SystemRoot", "SystemDrive", "windir", "ComSpec", "PATHEXT", "APPDATA", "LOCALAPPDATA", "USERPROFILE",
+            "TEMP", "TMP", "ProgramFiles", "ProgramData", "HOMEDRIVE", "HOMEPATH",
         )
 
         /** Commands that catalog stdio servers use; `auto` enables stdio servers when all are on PATH. */
         val COMMANDS = listOf("node", "npx")
 
-        fun commandsOnPath(path: String? = System.getenv("PATH"), commands: List<String> = COMMANDS): Boolean {
-            val dirs = path.orEmpty().split(File.pathSeparatorChar).filter { it.isNotBlank() }
-            return commands.all { cmd -> dirs.any { File(it, cmd).let { f -> f.isFile && f.canExecute() } } }
+        /** On Windows the commands are `node.exe` and `npx.cmd`, so PATHEXT extensions are tried as well. */
+        fun commandsOnPath(path: String? = System.getenv("PATH"), commands: List<String> = COMMANDS,
+            windows: Boolean = File.pathSeparatorChar == ';', pathExt: String? = System.getenv("PATHEXT")): Boolean {
+            val dirs = path.orEmpty().split(if (windows) ';' else File.pathSeparatorChar).filter { it.isNotBlank() }
+            val suffixes = if (windows) (pathExt ?: ".COM;.EXE;.BAT;.CMD").split(';').filter { it.isNotBlank() }.map { it.lowercase() } else listOf("")
+            return commands.all { cmd -> dirs.any { dir -> suffixes.any { File(dir, cmd + it).let { f -> f.isFile && f.canExecute() } } } }
         }
     }
 }

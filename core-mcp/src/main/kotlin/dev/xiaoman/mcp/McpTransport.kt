@@ -147,8 +147,9 @@ class McpStdioTransport(
     private val incoming = LinkedBlockingQueue<Incoming>(256)
     @Volatile private var closed = false
     private val process = try {
-        ProcessBuilder(listOf(requireNotNull(server.command)) + server.args).apply {
-            inheritedEnvironment?.let { keep -> environment().keys.retainAll(keep) }
+        ProcessBuilder(commandLine(requireNotNull(server.command), server.args)).apply {
+            // Windows variable names are case-insensitive ("Path"), so the allowlist is matched the same way.
+            inheritedEnvironment?.let { keep -> environment().keys.retainAll { key -> keep.any { it.equals(key, ignoreCase = true) } } }
             environment().putAll(server.env)
         }.start()
     } catch (e: Exception) {
@@ -209,6 +210,8 @@ class McpStdioTransport(
 
     override fun close() {
         closed = true
+        // npx starts the server as a child process (and on Windows runs under cmd.exe); stop those too.
+        runCatching { process.descendants().forEach { it.destroy() } }
         process.destroy()
         incoming.clear()
         incoming.offer(Incoming(null))
@@ -217,5 +220,28 @@ class McpStdioTransport(
         runCatching { process.errorStream.close() }
         stdout.interrupt()
         stderr.interrupt()
+    }
+}
+
+/** Arguments cmd.exe passes through unchanged, so wrapping a `.cmd` launcher cannot inject commands. */
+private val PLAIN_ARGUMENT = Regex("[A-Za-z0-9_./:=@+,-]*")
+
+/**
+ * On Windows, `npx` and similar Node.js launchers are `.cmd` scripts that ProcessBuilder cannot start by
+ * name; they are found through PATH/PATHEXT and run via `cmd.exe /d /c` when all arguments are plain.
+ * Other systems use the command as given.
+ */
+internal fun commandLine(command: String, args: List<String>, os: String = System.getProperty("os.name").orEmpty(),
+    path: String? = System.getenv("PATH"), pathExt: String? = System.getenv("PATHEXT"),
+    isFile: (java.io.File) -> Boolean = { it.isFile }): List<String> {
+    if (!os.lowercase().startsWith("windows") || command.contains('/') || command.contains('\\') || command.contains('.')) return listOf(command) + args
+    val extensions = (pathExt ?: ".COM;.EXE;.BAT;.CMD").split(';').filter { it.isNotBlank() }
+    val found = path.orEmpty().split(';').filter { it.isNotBlank() }.firstNotNullOfOrNull { dir ->
+        extensions.map { java.io.File(dir, command + it.lowercase()) }.firstOrNull(isFile)
+    } ?: return listOf(command) + args
+    return when {
+        found.extension.lowercase() !in setOf("cmd", "bat") -> listOf(found.path) + args
+        args.all { PLAIN_ARGUMENT.matches(it) } -> listOf("cmd.exe", "/d", "/c", command) + args
+        else -> listOf(command) + args
     }
 }

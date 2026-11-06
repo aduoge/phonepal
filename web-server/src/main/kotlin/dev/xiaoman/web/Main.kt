@@ -11,9 +11,11 @@ fun main(args: Array<String>) {
         println("""小满网页版后端
 用法：web-server [--host 127.0.0.1] [--port 8787] [--static DIR]
   [--access-code CODE] [--allow-private] [--timezone Asia/Shanghai] [--session-hours 2]
-  [--stdio-mcp auto|on|off] [--max-stdio 20] [--class-tokens FILE]
+  [--stdio-mcp auto|on|off] [--max-stdio 20] [--class-tokens FILE] [--local [--no-browser]]
        web-server tokens …   管理课堂令牌（web-server tokens --help）
 访问码也可通过 XIAOMAN_WEB_ACCESS_CODE 设置。默认仅监听本机。
+--local 学员在自己电脑上运行（启动包脚本使用）：端口被占用时自动往后换，没给访问码就随机生成，
+  打印局域网地址，并开启只能在本机打开的扫码页 /connect（自动用浏览器打开，--no-browser 不打开）。
 --stdio-mcp 控制需要 Node.js 的目录服务（12306 火车票）：auto（默认）在 PATH 里找到 node 和 npx 时开启，
   on 强制开启，off 关闭；每个会话一个子进程，最多 --max-stdio 个同时运行。
 记忆保存在学员浏览器里，随每次对话发来，服务器不落盘。
@@ -29,6 +31,8 @@ fun main(args: Array<String>) {
         var options = WebServer.Options(accessCode = System.getenv("XIAOMAN_WEB_ACCESS_CODE"))
         var stdioMode = "auto"
         var classTokens: Path? = null
+        var local = false
+        var openBrowser = true
         var i = 0
         while (i < args.size) {
             val flag = args[i++]
@@ -44,6 +48,8 @@ fun main(args: Array<String>) {
                 "--stdio-mcp" -> { stdioMode = value().also { require(it in setOf("auto", "on", "off")) }; options }
                 "--max-stdio" -> options.copy(maxStdioProcesses = value().toInt())
                 "--class-tokens" -> { classTokens = Path.of(value()); options }
+                "--local" -> { local = true; options }
+                "--no-browser" -> { openBrowser = false; options }
                 else -> error("参数无效")
             }
         }
@@ -53,9 +59,10 @@ fun main(args: Array<String>) {
             System.err.println("课堂令牌配置无效：${e.message}"); throw e
         } catch (e: IllegalStateException) { System.err.println("课堂令牌配置无效：${e.message}"); throw e }
         options = options.copy(classConfig = classConfig)
+        if (local) options = options.copy(localConnect = true, accessCode = options.accessCode ?: LocalLaunch.accessCode())
         // Core reminder parsing uses the process timezone.
         TimeZone.setDefault(TimeZone.getTimeZone(options.timezone))
-        val server = WebServer(options).start()
+        val server = if (local) LocalLaunch.start(options) else WebServer(options).start()
         Runtime.getRuntime().addShutdownHook(Thread { server.close() })
         println("小满已监听 http://${options.host}:${server.port}")
         println(when {
@@ -69,6 +76,11 @@ fun main(args: Array<String>) {
             "课堂令牌：上游 ${classConfig.upstreamUrl}，模型 ${classConfig.models.keys.joinToString("、")}，" +
                 (tokens?.let { "令牌文件 ${classConfig.tokensFile}（${it.size} 个）" } ?: "令牌文件 ${classConfig.tokensFile} 还不存在，生成令牌后自动开启")
         })
+        if (local) {
+            if (server.port != options.port) println("端口 ${options.port} 已被占用，改用 ${server.port}")
+            LocalLaunch.announce(server.port, options.accessCode)
+            if (openBrowser) LocalLaunch.openBrowser("http://127.0.0.1:${server.port}/connect")
+        }
     } catch (_: Exception) {
         System.err.println("启动失败，请检查参数和端口；使用 --help 查看用法")
         kotlin.system.exitProcess(1)

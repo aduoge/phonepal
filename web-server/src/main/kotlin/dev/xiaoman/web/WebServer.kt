@@ -46,6 +46,8 @@ class WebServer(
         val maxStdioProcesses: Int = 20,
         /** Class-token mode ([ClassGateway]); null keeps it off. */
         val classConfig: ClassConfig? = null,
+        /** Serves the loopback-only `/connect` page of [LocalLaunch] (`--local`). */
+        val localConnect: Boolean = false,
     ) {
         init { require(sessionMillis > 0 && maxSessions > 0 && chatTimeoutMillis > 0 && heartbeatMillis > 0 && maxStdioProcesses > 0) }
     }
@@ -98,7 +100,8 @@ class WebServer(
             if (path.startsWith("/api/")) {
                 if (path != "/api/info" && !authorized(x)) throw Problem(401, "需要访问码")
                 api(x, path)
-            } else static(x, path)
+            } else if (options.localConnect && LocalLaunch.isConnectPath(path)) LocalLaunch.serve(x, path, port, options.accessCode, stdio.enabled)
+            else static(x, path)
         } catch (p: Problem) { if (x.responseCode == -1) json(x, p.status, buildJsonObject { put("error", p.message) })
         } catch (_: Exception) { if (x.responseCode == -1) runCatching { json(x, 500, buildJsonObject { put("error", "请求处理失败") }) }
         } finally {

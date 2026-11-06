@@ -1,0 +1,23 @@
+:root { color-scheme: light; --primary: #1e6b52; --text: #202c25; --muted: #637168; --line: #e0e7df; --bg: #f7f9f6;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+body { margin: 0; background: var(--bg); color: var(--text); }
+main { max-width: 920px; margin: 0 auto; padding: 32px 20px 48px; }
+h1 { font-size: 28px; margin: 0 0 8px; }
+h2 { font-size: 20px; margin: 0 0 10px; }
+h3 { font-size: 16px; margin: 18px 0 8px; }
+p, li { line-height: 1.7; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); font-size: 14px; }
+.layout { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; margin-top: 20px; }
+.qr-card { background: #fff; border: 1px solid var(--line); border-radius: 18px; padding: 20px; text-align: center; }
+canvas { display: block; width: 296px; height: 296px; image-rendering: pixelated; }
+.url { font-size: 20px; font-weight: 600; word-break: break-all; margin: 12px 0 0; }
+.steps { flex: 1; min-width: 280px; }
+.code { display: inline-block; font: 700 28px/1.2 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 4px; padding: 4px 12px;
+  color: var(--primary); background: #e1f0e8; border-radius: 10px; }
+.address-list { display: flex; flex-direction: column; gap: 8px; }
+button { font: inherit; min-height: 44px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; color: var(--text); cursor: pointer; }
+button[aria-pressed="true"] { border-color: var(--primary); color: var(--primary); font-weight: 600; }
+button:focus-visible, a:focus-visible, summary:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+a { color: var(--primary); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>用手机打开小满</title>
+  <link rel="icon" href="/icon.svg">
+  <link rel="stylesheet" href="/connect/connect.css">
+</head>
+<body>
+  <main>
+    <h1>用手机打开小满</h1>
+    <p class="lead">小满正在这台电脑上运行。手机和电脑连<strong>同一个 Wi-Fi</strong>，用相机或微信扫下面的二维码。</p>
+    <div class="layout">
+      <section class="qr-card" aria-labelledby="qr-title">
+        <h2 id="qr-title" class="sr-only">二维码</h2>
+        <canvas id="qr" width="296" height="296" role="img" aria-label="正在生成二维码"></canvas>
+        <p id="url" class="url" aria-live="polite">正在查找局域网地址…</p>
+        <p id="label" class="muted"></p>
+      </section>
+      <section class="steps" aria-labelledby="steps-title">
+        <h2 id="steps-title">三步打开</h2>
+        <ol>
+          <li>手机连上和电脑相同的 Wi-Fi（或者让电脑连手机热点）。</li>
+          <li>扫左边（窄屏时在上面）的二维码，或在手机浏览器里输入二维码下面的地址。</li>
+          <li>页面提示输入访问码时，填：<span id="code" class="code">……</span></li>
+        </ol>
+        <div id="others" hidden>
+          <h3>扫不开？换一个地址试试</h3>
+          <div id="address-list" class="address-list"></div>
+        </div>
+        <p><button id="refresh" type="button">刷新地址</button> <a id="local-link" href="/">先在电脑浏览器里试用</a></p>
+        <p id="stdio" class="muted"></p>
+        <details>
+          <summary>手机打不开怎么办</summary>
+          <ul>
+            <li>确认手机没开流量代替 Wi-Fi，并且和电脑是同一个 Wi-Fi 名称。</li>
+            <li>Windows 第一次启动会弹出防火墙提示，要勾选“专用网络”并点“允许访问”。</li>
+            <li>公司、学校、酒店的 Wi-Fi 常常禁止设备互相访问：打开手机热点，让电脑连上这个热点，再点“刷新地址”重新扫码。</li>
+            <li>实在不行，先点“先在电脑浏览器里试用”，在电脑上练习也一样。</li>
+          </ul>
+        </details>
+      </section>
+    </div>
+  </main>
+  <script src="/connect/qrcode.js"></script>
+  <script src="/connect/connect.js"></script>
+</body>
+</html>

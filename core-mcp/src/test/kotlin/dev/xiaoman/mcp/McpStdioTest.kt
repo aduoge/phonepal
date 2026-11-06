@@ -96,4 +96,16 @@ class McpStdioTest {
             assertEquals("MCP_TEST_VALUE,PATH", client.callTool("env", buildJsonObject {}).text)
         }
     }
+
+    @Test fun windowsLaunchersRunThroughCmdOnlyWithPlainArguments() {
+        val files = setOf("C:\\node\\npx.cmd", "C:\\node\\node.exe").map { it.lowercase() }
+        val exists = { f: File -> f.path.replace('/', '\\').lowercase() in files }
+        fun line(cmd: String, args: List<String>, os: String = "Windows 11") =
+            commandLine(cmd, args, os, "C:\\Windows;C:\\node", ".COM;.EXE;.BAT;.CMD", exists)
+        assertEquals(listOf("npx", "-y", "12306-mcp"), line("npx", listOf("-y", "12306-mcp"), os = "Mac OS X"))
+        assertEquals(listOf("cmd.exe", "/d", "/c", "npx", "-y", "12306-mcp"), line("npx", listOf("-y", "12306-mcp")))
+        assertEquals("node.exe", File(line("node", listOf("a.js")).first().replace('\\', '/')).name)
+        assertEquals(listOf("npx", "-y", "x&calc"), line("npx", listOf("-y", "x&calc")))
+        assertEquals(listOf("missing"), line("missing", emptyList()))
+    }
 }
